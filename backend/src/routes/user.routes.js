@@ -1,7 +1,8 @@
-const express = require("express");
+import express from "express";
+import uploadAvatar from "../middlewares/uploadAvatar.middleware.js";
+import { updateProfile, getAllUsers } from "../controllers/user.controller.js";
+
 const router = express.Router();
-const userController = require("../controllers/user.controller");
-const uploadAvatar=require("../middlewares/uploadAvatar.middleware")
 
 router.put(
   "/update-profile",
@@ -9,9 +10,9 @@ router.put(
     { name: "avatar", maxCount: 1 },
     { name: "banner", maxCount: 1 }
   ]),
-  userController.updateProfile
+  updateProfile
 );
 
-router.get("/", userController.getAllUsers);
+router.get("/", getAllUsers);
 
-module.exports = router;
+export default router; 

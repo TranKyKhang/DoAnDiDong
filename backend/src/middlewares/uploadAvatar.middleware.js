@@ -10,8 +10,8 @@ const storage= multer.diskStorage({
     }
   },
       filename: (req, file, cb) => {
-    const ext = file.originalname.split(".").pop();
-    cb(null, Date.now() + "-" + file.fieldname + "." + ext);
+    const extension = file.originalname.split(".").pop();
+    cb(null, Date.now() + "-" + file.fieldname + "." + extension);
   }
 });
 

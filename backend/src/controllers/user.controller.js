@@ -1,7 +1,7 @@
-const { removeFile } = require("../utils/file");
-const db = require("../config/db");
+import { removeFile } from "../utils/file.js";
+import db from "../config/db.js";
 
-exports.getAllUsers = async (req, res) => {
+export const getAllUsers = async (req, res) => {
   try {
     const [rows] = await db.query("SELECT * FROM USERS");
 
@@ -19,10 +19,10 @@ exports.getAllUsers = async (req, res) => {
 };
 
 
-exports.updateProfile = async (req, res) => {
+export const updateProfile = async (req, res) => {
   const { id, display_name, bio } = req.body;
-  const avatar=req.file?.avatar?.[0]?.filename;
-  const banner=req.file?.banner?.[0]?.filename;
+  const avatar=req.files?.avatar?.[0]?.filename;
+  const banner=req.files?.banner?.[0]?.filename;
 
   if (!id) {
     return res.status(400).json({
@@ -33,7 +33,7 @@ exports.updateProfile = async (req, res) => {
    const [user] = await db.query("SELECT avatar, banner FROM users WHERE id = ?", [id]);
    if(avatar) await removeFile(user[0].avatar);
    if (banner) await removeFile(user[0].banner);
-    removeFile(user[0].avatar)
+
   let fields = [];
   let params = [];
 
