@@ -2,8 +2,9 @@ const express = require("express");
 const router = express.Router();
 const userController = require("../controllers/user.controller");
 const uploadAvatar=require("../middlewares/uploadAvatar.middleware")
+
 router.put(
-  "/profile",
+  "/update-profile",
   uploadAvatar.fields([
     { name: "avatar", maxCount: 1 },
     { name: "banner", maxCount: 1 }

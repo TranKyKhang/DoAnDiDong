@@ -1,3 +1,4 @@
+const { removeFile } = require("../utils/file");
 const db = require("../config/db");
 
 exports.getAllUsers = async (req, res) => {
@@ -20,6 +21,8 @@ exports.getAllUsers = async (req, res) => {
 
 exports.updateProfile = async (req, res) => {
   const { id, display_name, bio } = req.body;
+  const avatar=req.file?.avatar?.[0]?.filename;
+  const banner=req.file?.banner?.[0]?.filename;
 
   if (!id) {
     return res.status(400).json({
@@ -27,7 +30,10 @@ exports.updateProfile = async (req, res) => {
       message: "Thiếu user_id"
     });
   }
-
+   const [user] = await db.query("SELECT avatar, banner FROM users WHERE id = ?", [id]);
+   if(avatar) await removeFile(user[0].avatar);
+   if (banner) await removeFile(user[0].banner);
+    removeFile(user[0].avatar)
   let fields = [];
   let params = [];
 
@@ -42,13 +48,13 @@ exports.updateProfile = async (req, res) => {
   }
 
   if (req.files?.avatar) {
-    const avatarPath = `/uploads/avatars/${req.files.avatar[0].filename}`;
+    const avatarPath = `/upload/avatars/${req.files.avatar[0].filename}`;
     fields.push("avatar = ?");
     params.push(avatarPath);
   }
 
   if (req.files?.banner) {
-    const bannerPath = `/uploads/banners/${req.files.banner[0].filename}`;
+    const bannerPath = `/upload/banners/${req.files.banner[0].filename}`;
     fields.push("banner = ?");
     params.push(bannerPath);
   }

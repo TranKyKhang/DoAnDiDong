@@ -21,7 +21,7 @@ app.get("/", (req, res) => {
   });
 });
 
-app.use("/uploads", express.static("upload"));
+app.use("/upload", express.static("upload"));
 app.use("/api/users", userRoutes);
 app.use("/api/communities",communityRoutes);
 module.exports = app;
