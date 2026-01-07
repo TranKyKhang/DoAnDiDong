@@ -24,5 +24,4 @@ app.use("/upload", express.static("upload"));
 app.use("/api/users", userRoutes);
 app.use("/api/communities", communityRoutes);
 app.use("/api/posts", postRoutes);
-
 export default app; 

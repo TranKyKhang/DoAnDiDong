@@ -33,10 +33,10 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-// Multer upload
+
 const upload = multer({
   storage,
-  limits: { fileSize: 1024 * 1024 * 1024 }, // 1GB
+  limits: { fileSize: 1024 * 1024 * 1024 }, 
   fileFilter
 });
 
