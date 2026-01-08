@@ -1,20 +1,17 @@
-const mysql = require('mysql2'); // Sử dụng thư viện mysql2 bạn đã cài
-require('dotenv').config(); // Lấy thông tin từ file .env 
+import mysql from "mysql2/promise";
+import dotenv from "dotenv";
 
-const connection = mysql.createConnection({
+dotenv.config(); 
+
+const pool = mysql.createPool({
   host: process.env.DB_HOST,
+  port: process.env.DB_PORT || 3306,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  port: process.env.DB_PORT
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
 });
 
-connection.connect((err) => {
-  if (err) {
-    console.error('Lỗi kết nối database: ' + err.stack);
-    return;
-  }
-  console.log('Đã kết nối database thành công!');
-});
-
-module.exports = connection; // Xuất kết nối để các file khác sử dụng
+export default pool; 

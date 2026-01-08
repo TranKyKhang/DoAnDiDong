@@ -1,7 +1,8 @@
-const express = require("express");
+import express from "express";
+import * as postController from "../controllers/post.controller.js"; 
+
 const router = express.Router();
-const postController = require("../controllers/post.controller");
 
 router.get("/:id", postController.getPostDetail);
 
-module.exports = router;
+export default router;

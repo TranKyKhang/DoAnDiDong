@@ -1,35 +1,27 @@
-const db = require("../config/db"); 
+import PostModel from "../models/post.model.js";
 
-exports.getPostDetail = (req, res) => {
+export const getPostDetail = async (req, res) => {
     const postId = req.params.id;
 
-    const sql = `
-        SELECT p.*, u.username as author_name, c.name as community_name 
-        FROM posts p 
-        JOIN users u ON p.id = u.id 
-        JOIN communities c ON p.id = c.id 
-        WHERE p.id = ?`;
+    try {
+        const postData = await PostModel.getDetail(postId);
 
-    db.query(sql, [postId], (err, result) => {
-        if (err) return res.status(500).json({ success: false, error: err.message });
-        if (result.length === 0) return res.status(404).json({ success: false, message: "Không tìm thấy bài viết" });
+        if (!postData) {
+            return res.status(404).json({ success: false, message: "Không tìm thấy bài viết" });
+        }
 
-        const postData = result[0];
+        const imagesArray = await PostModel.getImages(postId);
 
-        const imageSql = `SELECT id as id, image FROM post_images WHERE post_id = ?`;
-
-        db.query(imageSql, [postId], (err, imageResults) => {
-            if (err) return res.status(500).json({ success: false, error: err.message });
-
-            const imagesArray = imageResults ? imageResults : [];
-
-            res.json({
-                success: true,
-                data: {
-                    ...postData,
-                    images: imagesArray
-                }
-            });
+        res.json({
+            success: true,
+            data: {
+                ...postData,
+                images: imagesArray
+            }
         });
-    });
+
+    } catch (err) {
+        console.error("Lỗi Post Controller:", err);
+        res.status(500).json({ success: false, error: err.message });
+    }
 };

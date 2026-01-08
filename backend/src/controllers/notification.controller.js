@@ -1,7 +1,7 @@
-const Notification = require('../models/notifications.model');
-const db = require('../config/db');
+import NotificationModel from '../models/notifications.model.js';
+import db from '../config/db.js'; 
 
-exports.createNotification = (req, res) => {
+export const createNotification = async (req, res) => {
     const { type, content, recipient_id, sender_id, post_id, comment_id } = req.body;
 
     if (!type || !content || !recipient_id) {
@@ -19,30 +19,15 @@ exports.createNotification = (req, res) => {
         });
     }
 
-    Notification.create({
-        type,
-        content,
-        recipient_id,
-        sender_id,
-        post_id,
-        comment_id
-    }, (err, result) => {
-        if (err) {
-            console.error('Lỗi tạo thông báo:', err);
-            
-            if (err.code === 'ER_NO_REFERENCED_ROW_2') {
-                return res.status(404).json({
-                    success: false,
-                    message: 'Người nhận, người gửi hoặc bài viết không tồn tại.'
-                });
-            }
-
-            return res.status(500).json({ 
-                success: false, 
-                message: "Lỗi Server nội bộ",
-                error: err.message 
-            });
-        }
+    try {
+        const result = await NotificationModel.create({
+            type,
+            content,
+            recipient_id,
+            sender_id,
+            post_id,
+            comment_id
+        });
 
         return res.status(201).json({
             success: true,
@@ -54,29 +39,35 @@ exports.createNotification = (req, res) => {
                 content
             }
         });
-    });
-    
+
+    } catch (err) {
+        console.error('Lỗi tạo thông báo:', err);
+        
+        if (err.code === 'ER_NO_REFERENCED_ROW_2') {
+            return res.status(404).json({
+                success: false,
+                message: 'Người nhận, người gửi hoặc bài viết không tồn tại.'
+            });
+        }
+
+        return res.status(500).json({ 
+            success: false, 
+            message: "Lỗi Server nội bộ",
+            error: err.message 
+        });
+    }
 };
-exports.getNotificationsByUser = (req, res) => {
+
+export const getNotificationsByUser = async (req, res) => {
     const userId = req.params.userId;
 
     if (!userId) {
-        return res.status(400).json({
-            success: false,
-            message: "Thiếu User ID"
-        });
+        return res.status(400).json({ success: false, message: "Thiếu User ID" });
     }
 
-    const checkUserSql = "SELECT id FROM users WHERE id = ?";
-    
-    db.query(checkUserSql, [userId], (err, users) => {
-        if (err) {
-            return res.status(500).json({
-                success: false,
-                message: "Lỗi kiểm tra user",
-                error: err.message
-            });
-        }
+    try {
+        const checkUserSql = "SELECT id FROM users WHERE id = ?";
+        const [users] = await db.query(checkUserSql, [userId]);
 
         if (users.length === 0) {
             return res.status(404).json({
@@ -85,19 +76,18 @@ exports.getNotificationsByUser = (req, res) => {
             });
         }
 
-        Notification.getByUserId(userId, (err, results) => {
-            if (err) {
-                console.error("Lỗi lấy thông báo:", err);
-                return res.status(500).json({
-                    success: false,
-                    error: err.message
-                });
-            }
+        const results = await NotificationModel.getByUserId(userId);
 
-            return res.status(200).json({
-                success: true,
-                data: results 
-            });
+        return res.status(200).json({
+            success: true,
+            data: results 
         });
-    });
+
+    } catch (err) {
+        console.error("Lỗi lấy thông báo:", err);
+        return res.status(500).json({
+            success: false,
+            error: err.message
+        });
+    }
 };
