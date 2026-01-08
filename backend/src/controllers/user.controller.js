@@ -23,7 +23,8 @@ export const updateProfile = async (req, res) => {
   const { id, display_name, bio } = req.body;
   const avatar=req.files?.avatar?.[0]?.filename;
   const banner=req.files?.banner?.[0]?.filename;
-
+  console.log("BODY:", req.body);
+  console.log("FILES:", req.files);
   if (!id) {
     return res.status(400).json({
       success: false,
@@ -85,6 +86,40 @@ export const updateProfile = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Lỗi server"
+    });
+  }
+};
+
+
+export const getUserById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [rows] = await db.query(
+      `
+      SELECT 
+        display_name,
+        bio,
+        avatar,
+        banner
+      FROM USERS
+      WHERE id = ?
+      `,
+      [id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({
+        message: "User not found"
+      });
+    }
+
+    res.json(rows[0]);
+
+  } catch (err) {
+    console.error("MYSQL ERROR:", err);
+    res.status(500).json({
+      message: err.message
     });
   }
 };

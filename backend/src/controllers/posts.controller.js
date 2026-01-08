@@ -17,12 +17,12 @@ export const updatePost = async (req, res) => {
     
     const [existing] = await db.query("SELECT * FROM POSTS WHERE id = ?", [postId]);
     if (existing.length === 0) {
-      return res.status(404).json({ success: false, message: "Post not found" });
+      return res.status(404).json({ success: false, message: "không tìm thấy bài viết" });
     }
     const post = existing[0];
 
     if (post.user_id !== userId) {
-      return res.status(403).json({ success: false, message: "You are not allowed to edit this post" });
+      return res.status(403).json({ success: false, message: "bạn không thể chỉnh sửa bài viết này" });
     }
 
     const fields = [];
@@ -68,7 +68,7 @@ export const updatePost = async (req, res) => {
       await db.query("INSERT INTO POST_IMAGES (post_id, image) VALUES ?", [imgValues]);
     }
 
-    return res.json({ success: true, message: "Post updated successfully" });
+    return res.json({ success: true, message: "cập nhật bìa viết thành công" });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ success: false, message: "Server error" });
