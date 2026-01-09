@@ -31,7 +31,10 @@ fun PopularScreen(
         )
     ) {
         items(popularPosts) { post ->
-            AppPostItem(post = post,onItemClick = { onPostClick(post.id) })
+            AppPostItem(
+                post = post,
+                onItemClick = { onPostClick(post.id) } // <--- Gọi callback khi click
+            )
         }
     }
 }

@@ -14,6 +14,7 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -33,6 +34,7 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun AppHomeScreen() {
+    val context = LocalContext.current
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -68,7 +70,6 @@ fun AppHomeScreen() {
         Scaffold(
             topBar = {
                 val isSearchRoute = currentRoute?.startsWith("search") == true
-                // Thêm biến này để kiểm tra xem có đang ở màn chi tiết không
                 val isPostDetailRoute = currentRoute?.startsWith("post_detail") == true
                 when {
                     currentRoute == Screen.Profile.route -> {
@@ -122,7 +123,6 @@ fun AppHomeScreen() {
             },
             bottomBar = {
                 val isSearchRoute = currentRoute?.startsWith("search") == true
-                // Thêm biến kiểm tra
                 val isPostDetailRoute = currentRoute?.startsWith("post_detail") == true
                 if (currentRoute != "settings" &&
                     currentRoute != "create_group" &&
@@ -190,7 +190,7 @@ fun AppHomeScreen() {
                 }
 
                 // Màn Profile
-                composable(Screen.Profile.route) { ProfileScreen() }
+                composable(Screen.Profile.route) { ProfileScreen( context = context, userId = 5) }
 
                 // Màn Search
                 composable(

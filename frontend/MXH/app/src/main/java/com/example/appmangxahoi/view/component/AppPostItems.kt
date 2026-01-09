@@ -58,17 +58,14 @@ import androidx.compose.ui.unit.sp
 import com.example.appmangxahoi.model.DataClassPost
 
     @Composable
-    fun AppPostItem(
-        post: DataClassPost,
-        onItemClick:()->Unit={}
-    ) {
+    fun AppPostItem(post: DataClassPost,onItemClick: () -> Unit = {}) {
         Card(
             colors = CardDefaults.cardColors(containerColor = Color.White), // Hoặc MaterialTheme.colorScheme.surface
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 4.dp, horizontal = 8.dp) // Khoảng cách giữa các bài
-                .clickable{onItemClick()}
+                .clickable { onItemClick() }
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
                 // --- HEADER: Subreddit + Author + Time ---
