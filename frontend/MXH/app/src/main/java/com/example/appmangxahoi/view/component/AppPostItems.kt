@@ -4,7 +4,6 @@ package com.example.appmangxahoi.view.component
 // 1. Các thành phần giao diện cơ bản (Layout, Modifier, Graphics)
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -58,17 +57,13 @@ import androidx.compose.ui.unit.sp
 import com.example.appmangxahoi.model.DataClassPost
 
     @Composable
-    fun AppPostItem(
-        post: DataClassPost,
-        onItemClick:()->Unit={}
-    ) {
+    fun AppPostItem(post: DataClassPost) {
         Card(
             colors = CardDefaults.cardColors(containerColor = Color.White), // Hoặc MaterialTheme.colorScheme.surface
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 4.dp, horizontal = 8.dp) // Khoảng cách giữa các bài
-                .clickable{onItemClick()}
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
                 // --- HEADER: Subreddit + Author + Time ---

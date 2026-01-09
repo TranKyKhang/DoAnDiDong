@@ -1,14 +1,17 @@
 plugins {
+    alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.android.application)
-    // Dùng Kotlin 2.0.21 (Bản mới nhất, ổn định)
-    id("org.jetbrains.kotlin.android") version "2.0.21"
-    id("org.jetbrains.kotlin.plugin.compose") version "2.0.21"
+    alias(libs.plugins.kotlin.android)
+    id("org.jetbrains.kotlin.plugin.serialization") version "2.0.0"
+   // Dòng này dùng cho Compose (nếu có trong TOML)
 }
 
 android {
     namespace = "com.example.appmangxahoi"
     compileSdk = 35 // BẮT BUỘC: Phải là 35 để chạy được các thư viện mới nhất
-
+    buildFeatures {
+        compose = true
+    }
     defaultConfig {
         applicationId = "com.example.appmangxahoi"
         minSdk = 24
@@ -31,10 +34,7 @@ android {
             )
         }
     }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-    }
+
     kotlinOptions {
         jvmTarget = "11"
     }
@@ -46,6 +46,16 @@ android {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
+    }
+    compileOptions {
+        // Đưa Java về phiên bản 11 (hoặc 17 nếu bạn muốn dùng bản mới hơn)
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+    }
+
+    kotlinOptions {
+        // Đưa Kotlin về cùng phiên bản 11 để khớp với Java
+        jvmTarget = "11"
     }
 }
 
@@ -90,4 +100,11 @@ dependencies {
     // Thư viện phát Video (ExoPlayer)
     implementation("androidx.media3:media3-exoplayer:1.4.1")
     implementation("androidx.media3:media3-ui:1.4.1")
+
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.4")
+
 }

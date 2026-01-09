@@ -14,8 +14,8 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -33,6 +33,7 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun AppHomeScreen() {
+    val context = LocalContext.current
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -68,8 +69,6 @@ fun AppHomeScreen() {
         Scaffold(
             topBar = {
                 val isSearchRoute = currentRoute?.startsWith("search") == true
-                // Thêm biến này để kiểm tra xem có đang ở màn chi tiết không
-                val isPostDetailRoute = currentRoute?.startsWith("post_detail") == true
                 when {
                     currentRoute == Screen.Profile.route -> {
                         ProfileTopBar(
@@ -88,8 +87,7 @@ fun AppHomeScreen() {
                     currentRoute == "settings" ||
                             currentRoute == "create_group" ||
                             currentRoute?.startsWith("community/") == true ||
-                            isSearchRoute||
-                            isPostDetailRoute -> { }
+                            isSearchRoute -> { }
 
                     // Màn Home/Popular/Inbox -> Hiện AppTopBar
                     else -> {
@@ -122,13 +120,10 @@ fun AppHomeScreen() {
             },
             bottomBar = {
                 val isSearchRoute = currentRoute?.startsWith("search") == true
-                // Thêm biến kiểm tra
-                val isPostDetailRoute = currentRoute?.startsWith("post_detail") == true
                 if (currentRoute != "settings" &&
                     currentRoute != "create_group" &&
                     !isSearchRoute &&
-                    currentRoute != Screen.Create.route&&
-                    !isPostDetailRoute
+                    currentRoute != Screen.Create.route
                 ) {
                     AppBottomBar(navController = navController)
                 }
@@ -156,22 +151,14 @@ fun AppHomeScreen() {
                             bottom = 16.dp
                         )
                     ) {
-                        items(mockPosts) { post -> AppPostItem(
-                            post = post,
-                            onItemClick = {
-                            // Điều hướng sang màn hình chi tiết kèm ID bài viết
-                            navController.navigate("post_detail/${post.id}")
-                        }) }
+                        items(mockPosts) { post -> AppPostItem(post = post) }
                     }
                 }
 
                 // --- MÀN HÌNH POPULAR  ---
                 composable("popular") {
                     PopularScreen(
-                        topPadding = innerPadding.calculateTopPadding(),
-                        onPostClick = { postId ->
-                            navController.navigate("post_detail/$postId") // Điều hướng tại đây
-                        }
+                        topPadding = innerPadding.calculateTopPadding()
                     )
                 }
 
@@ -190,7 +177,7 @@ fun AppHomeScreen() {
                 }
 
                 // Màn Profile
-                composable(Screen.Profile.route) { ProfileScreen() }
+                composable(Screen.Profile.route) { ProfileScreen( context = context, userId = 5) }
 
                 // Màn Search
                 composable(
@@ -224,21 +211,6 @@ fun AppHomeScreen() {
                         onBackClick = { navController.popBackStack() },
                         onSearchClick = { navController.navigate("search?community=$communityName") }
                     )
-                }
-
-                composable(
-                    route = "post_detail/{postId}", // Định nghĩa đường dẫn có tham số
-                    arguments = listOf(navArgument("postId") { type = NavType.IntType }) // Khai báo kiểu dữ liệu là Int
-                ) { backStackEntry ->
-                    // Lấy ID từ đường dẫn
-                    val postId = backStackEntry.arguments?.getInt("postId")
-
-                    if (postId != null) {
-                        PostDetailScreen(
-                            postId = postId,
-                            onBackClick = { navController.popBackStack() } // Xử lý nút Back
-                        )
-                    }
                 }
             }
         }
