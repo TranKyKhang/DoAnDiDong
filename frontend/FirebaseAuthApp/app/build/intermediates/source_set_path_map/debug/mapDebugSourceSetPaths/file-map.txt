@@ -1,0 +1,52 @@
+com.example.firebaseauthapp-browser-1.4.0-0 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/06aabbff7ed9ed5da1f84b739d3e31c0/transformed/browser-1.4.0/res
+com.example.firebaseauthapp-core-1.17.0-1 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/0f2d7502c8fd0f1462a6bcf651fa2c34/transformed/core-1.17.0/res
+com.example.firebaseauthapp-play-services-basement-18.5.0-2 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/10da2a407b3ace5bcec34a59ba0ec9ea/transformed/play-services-basement-18.5.0/res
+com.example.firebaseauthapp-transition-1.5.0-3 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/16336e1050a23f278e79934d0016c62f/transformed/transition-1.5.0/res
+com.example.firebaseauthapp-ads-adservices-1.1.0-beta11-4 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/1812f7946c2f0582ec45286981e35978/transformed/ads-adservices-1.1.0-beta11/res
+com.example.firebaseauthapp-core-runtime-2.2.0-5 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/1a5f6ce2e754da1b64ba9841cd72a4c1/transformed/core-runtime-2.2.0/res
+com.example.firebaseauthapp-constraintlayout-2.1.4-6 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/1ee65fea2ad2b57107b589d77123ed54/transformed/constraintlayout-2.1.4/res
+com.example.firebaseauthapp-lifecycle-process-2.6.2-7 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/2032863cfc024a7c171fb93d2d132463/transformed/lifecycle-process-2.6.2/res
+com.example.firebaseauthapp-coordinatorlayout-1.1.0-8 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/2c4aafa201ee989d696c6a893aa0c556/transformed/coordinatorlayout-1.1.0/res
+com.example.firebaseauthapp-lifecycle-runtime-2.6.2-9 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/2e0e880a8a867ba801dba2714b7fed1e/transformed/lifecycle-runtime-2.6.2/res
+com.example.firebaseauthapp-datastore-preferences-core-release-10 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/31dac82aca80720b04f4cdf5553ef6ba/transformed/datastore-preferences-core-release/res
+com.example.firebaseauthapp-tracing-1.2.0-11 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/36ba83dfb62e5cca41e7027a6496aea3/transformed/tracing-1.2.0/res
+com.example.firebaseauthapp-lifecycle-livedata-core-2.6.2-12 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/3a3520ebf1d13bf32add462ece3fc443/transformed/lifecycle-livedata-core-2.6.2/res
+com.example.firebaseauthapp-emoji2-1.3.0-13 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/523ef20e4ba61bb071eaa3ce9545e4aa/transformed/emoji2-1.3.0/res
+com.example.firebaseauthapp-core-viewtree-1.0.0-14 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/56773a050cf2f01791c96d6fed28ffb2/transformed/core-viewtree-1.0.0/res
+com.example.firebaseauthapp-cardview-1.0.0-15 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/6427c7548fb73482718ab7f9b82e5667/transformed/cardview-1.0.0/res
+com.example.firebaseauthapp-emoji2-views-helper-1.3.0-16 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/6494e7de2e7411bb158e4f12fda52171/transformed/emoji2-views-helper-1.3.0/res
+com.example.firebaseauthapp-profileinstaller-1.3.1-17 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/6860ec161087f77d44894f99b488d41f/transformed/profileinstaller-1.3.1/res
+com.example.firebaseauthapp-datastore-core-release-18 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/6d7dd021c7e7dcfee383e4659f1b5112/transformed/datastore-core-release/res
+com.example.firebaseauthapp-datastore-release-19 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/75803b6dae2b07af90c825d1720906b4/transformed/datastore-release/res
+com.example.firebaseauthapp-lifecycle-viewmodel-2.6.2-20 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/75e705d9ff9d8d945e5126c9ff1f88e2/transformed/lifecycle-viewmodel-2.6.2/res
+com.example.firebaseauthapp-core-ktx-1.17.0-21 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/76df8cf79cf46868e0ed5d5f4f91e354/transformed/core-ktx-1.17.0/res
+com.example.firebaseauthapp-datastore-preferences-release-22 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/78a52b88d4c47856432a5ff541870680/transformed/datastore-preferences-release/res
+com.example.firebaseauthapp-annotation-experimental-1.4.1-23 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/7baa0fc3458ce460e3adb8e374dc5180/transformed/annotation-experimental-1.4.1/res
+com.example.firebaseauthapp-lifecycle-livedata-2.6.2-24 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/7c2831c6eb3c19188d026d2c5e82ff82/transformed/lifecycle-livedata-2.6.2/res
+com.example.firebaseauthapp-recyclerview-1.1.0-25 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/85eb02f0bf350c2023696ce433db62e0/transformed/recyclerview-1.1.0/res
+com.example.firebaseauthapp-credentials-play-services-auth-1.2.0-rc01-26 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/8757c413c75d8f86f6ed62099a510829/transformed/credentials-play-services-auth-1.2.0-rc01/res
+com.example.firebaseauthapp-play-services-auth-20.7.0-27 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/98132fd269bb06cc6fdfb7b153152ba7/transformed/play-services-auth-20.7.0/res
+com.example.firebaseauthapp-viewpager2-1.0.0-28 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/a5c92a5081f637bab0f8b7d260ca96c6/transformed/viewpager2-1.0.0/res
+com.example.firebaseauthapp-appcompat-resources-1.7.1-29 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/a7ce81db742456260e267821ebe7d305/transformed/appcompat-resources-1.7.1/res
+com.example.firebaseauthapp-core-common-2.0.3-30 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/abc63a26839be05f134d5440da1f80c2/transformed/core-common-2.0.3/res
+com.example.firebaseauthapp-startup-runtime-1.1.1-31 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/adc4301507b68aa45e371b86a390fe0a/transformed/startup-runtime-1.1.1/res
+com.example.firebaseauthapp-firebase-common-22.0.1-32 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/afde916b8be1e4f698ce8aa02dc5dc0d/transformed/firebase-common-22.0.1/res
+com.example.firebaseauthapp-lifecycle-viewmodel-savedstate-2.6.2-33 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/b4e2da2179c4f344da8c007018fa4d10/transformed/lifecycle-viewmodel-savedstate-2.6.2/res
+com.example.firebaseauthapp-security-crypto-1.1.0-34 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/b5443cfd3685c3cf4fd11233405f69bd/transformed/security-crypto-1.1.0/res
+com.example.firebaseauthapp-play-services-base-18.5.0-35 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/be3ca7aed39abe5e5d6a1d0699cf2eb8/transformed/play-services-base-18.5.0/res
+com.example.firebaseauthapp-drawerlayout-1.1.1-36 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/c69bc1c186f1ab7ec8540a68775d4ef3/transformed/drawerlayout-1.1.1/res
+com.example.firebaseauthapp-credentials-1.2.0-rc01-37 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/cbcb7a2e8a000199d62fee4080fca9df/transformed/credentials-1.2.0-rc01/res
+com.example.firebaseauthapp-activity-1.8.0-38 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/d747d24b93848bef7468cde67c466ab9/transformed/activity-1.8.0/res
+com.example.firebaseauthapp-fragment-1.5.4-39 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/e197a0d06277a4b224a9d3fdbbd7118d/transformed/fragment-1.5.4/res
+com.example.firebaseauthapp-material-1.12.0-40 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/e240a6277e75fbb3e40a58dff1e042fd/transformed/material-1.12.0/res
+com.example.firebaseauthapp-savedstate-1.2.1-41 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/f74f886ccce09f28fc7b897361b8e642/transformed/savedstate-1.2.1/res
+com.example.firebaseauthapp-ads-adservices-java-1.1.0-beta11-42 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/fa42867c37c9447d9cc2b31570e88a63/transformed/ads-adservices-java-1.1.0-beta11/res
+com.example.firebaseauthapp-appcompat-1.7.1-43 /Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/ffb2c3032550525f62f98935b7e50c77/transformed/appcompat-1.7.1/res
+com.example.firebaseauthapp-pngs-44 /Users/nguyenhokhacduy/Desktop/Đồ án Lập trình di động/FirebaseAuthApp/app/build/generated/res/pngs/debug
+com.example.firebaseauthapp-res-45 /Users/nguyenhokhacduy/Desktop/Đồ án Lập trình di động/FirebaseAuthApp/app/build/generated/res/processDebugGoogleServices
+com.example.firebaseauthapp-resValues-46 /Users/nguyenhokhacduy/Desktop/Đồ án Lập trình di động/FirebaseAuthApp/app/build/generated/res/resValues/debug
+com.example.firebaseauthapp-packageDebugResources-47 /Users/nguyenhokhacduy/Desktop/Đồ án Lập trình di động/FirebaseAuthApp/app/build/intermediates/incremental/debug/packageDebugResources/merged.dir
+com.example.firebaseauthapp-packageDebugResources-48 /Users/nguyenhokhacduy/Desktop/Đồ án Lập trình di động/FirebaseAuthApp/app/build/intermediates/incremental/debug/packageDebugResources/stripped.dir
+com.example.firebaseauthapp-debug-49 /Users/nguyenhokhacduy/Desktop/Đồ án Lập trình di động/FirebaseAuthApp/app/build/intermediates/merged_res/debug/mergeDebugResources
+com.example.firebaseauthapp-debug-50 /Users/nguyenhokhacduy/Desktop/Đồ án Lập trình di động/FirebaseAuthApp/app/src/debug/res
+com.example.firebaseauthapp-main-51 /Users/nguyenhokhacduy/Desktop/Đồ án Lập trình di động/FirebaseAuthApp/app/src/main/res
