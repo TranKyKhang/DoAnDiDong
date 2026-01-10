@@ -88,6 +88,7 @@ fun AppHomeScreen() {
                     // Ẩn TopBar ở các màn hình này
                     currentRoute == "settings" ||
                             currentRoute == "create_group" ||
+                            currentRoute == "change_password" ||
                             currentRoute?.startsWith("community/") == true ||
                             isSearchRoute||
                             isPostDetailRoute -> { }
@@ -127,8 +128,9 @@ fun AppHomeScreen() {
                 if (currentRoute != "settings" &&
                     currentRoute != "create_group" &&
                     !isSearchRoute &&
-                    currentRoute != Screen.Create.route&&
-                    !isPostDetailRoute
+                    currentRoute != Screen.Create.route &&
+                    !isPostDetailRoute &&
+                    currentRoute != "change_password"
                 ) {
                     AppBottomBar(navController = navController)
                 }
@@ -207,8 +209,16 @@ fun AppHomeScreen() {
 
                 // Các màn hình phụ khác
                 composable("settings") {
-                    SettingScreen(onBackClick = { navController.popBackStack() })
+                    SettingScreen(
+                        onBackClick = { navController.popBackStack() },
+                        onChangePasswordClick = { navController.navigate("change_password")})
                 }
+                composable("change_password") {
+                    ChangePasswordScreen(
+                        onBackClick = { navController.popBackStack() }
+                    )
+                }
+
 
                 composable("create_group") {
                     CreateGroupScreen(
