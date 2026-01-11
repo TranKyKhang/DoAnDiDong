@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import userRoutes from "./routes/user.routes.js";
 import communityRoutes from "./routes/community.routes.js";
 import postRoutes from "./routes/posts.routes.js";
+import voteRoutes from "./routes/votes.routes.js";
 
 dotenv.config({ quiet: true });
 
@@ -24,4 +25,6 @@ app.use("/upload", express.static("upload"));
 app.use("/api/users", userRoutes);
 app.use("/api/communities", communityRoutes);
 app.use("/api/posts", postRoutes);
+app.use("/api/votes", voteRoutes);
+
 export default app; 
