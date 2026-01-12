@@ -1,7 +1,7 @@
-import db from "../config/db.js"; 
+const db = require("../config/db");
 
 const Notification = {
-    create: async (data) => {
+    create: (data, callback) => {
         const sql = `
             INSERT INTO notifications 
             (type, content, recipient_id, sender_id, post_id, comment_id, created_at) 
@@ -17,19 +17,16 @@ const Notification = {
             data.comment_id || null
         ];
 
-        const [result] = await db.query(sql, values);
-        return result;
+        db.query(sql, values, callback);
     },
-
-    getByUserId: async (userId) => {
+    getByUserId: (userId, callback) => {
         const sql = `
             SELECT * FROM notifications 
             WHERE recipient_id = ? 
             ORDER BY created_at DESC
         `;
-        const [rows] = await db.query(sql, [userId]);
-        return rows;
+        db.query(sql, [userId], callback);
     }
 };
 
-export default Notification; 
+module.exports = Notification;

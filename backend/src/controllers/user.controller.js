@@ -1,5 +1,6 @@
 import { removeFile } from "../utils/file.js";
 import db from "../config/db.js";
+import bcrypt from 'bcryptjs';
 
 export const getAllUsers = async (req, res) => {
   try {
@@ -121,5 +122,71 @@ export const getUserById = async (req, res) => {
     res.status(500).json({
       message: err.message
     });
+  }
+};
+
+export const getProfile = async (req, res) => {
+  try {
+    const [rows] = await pool.execute(
+      'SELECT id, email, username, display_name, bio, avatar, banner, post_rating, comment_rating, created_at FROM users WHERE id = ?',
+      [req.user.id]
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' });
+    }
+    const user = rows[0];
+    user.created_at = user.created_at.toISOString();
+    res.json(user);
+  } catch (error) {
+    console.error('Get profile error:', error);
+    res.status(500).json({ success: false, message: 'Lỗi server' });
+  }
+};
+
+// export const updateProfile = async (req, res) => {
+//   const { display_name, bio, avatar, banner } = req.body;
+//   try {
+//     await pool.execute(
+//       'UPDATE users SET display_name = ?, bio = ?, avatar = ?, banner = ? WHERE id = ?',
+//       [display_name || null, bio || null, avatar || null, banner || null, req.user.id]
+//     );
+
+//     const [rows] = await pool.execute(
+//       'SELECT id, email, username, display_name, bio, avatar, banner, post_rating, comment_rating, created_at FROM users WHERE id = ?',
+//       [req.user.id]
+//     );
+//     const user = rows[0];
+//     user.created_at = user.created_at.toISOString();
+//     res.json(user);
+//   } catch (error) {
+//     console.error('Update profile error:', error);
+//     res.status(500).json({ success: false, message: 'Lỗi server' });
+//   }
+// };
+
+export const changePassword = async (req, res) => {
+  const { old_password, new_password } = req.body;
+  if (!old_password || !new_password) {
+    return res.status(400).json({ success: false, message: 'Thiếu thông tin' });
+  }
+
+  try {
+    const [rows] = await pool.execute('SELECT password FROM users WHERE id = ?', [req.user.id]);
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' });
+    }
+
+    const match = await bcrypt.compare(old_password, rows[0].password);
+    if (!match) {
+      return res.status(401).json({ success: false, message: 'Mật khẩu cũ không đúng' });
+    }
+
+    const hashed = await bcrypt.hash(new_password, 10);
+    await pool.execute('UPDATE users SET password = ? WHERE id = ?', [hashed, req.user.id]);
+
+    res.json({ success: true, message: 'Đổi mật khẩu thành công' });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({ success: false, message: 'Lỗi server' });
   }
 };

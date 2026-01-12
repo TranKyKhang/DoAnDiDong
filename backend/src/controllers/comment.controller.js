@@ -1,4 +1,4 @@
-import CommentModel from "../models/comment.model.js"; 
+const CommentModel = require("../models/comment.model");
 
 const calculateDepth = (nodes, level) => {
     nodes.forEach(node => {
@@ -36,7 +36,8 @@ const buildCommentTree = (comments) => {
     return tree;
 };
 
-export const getCommentsByPost = async (req, res) => {
+
+exports.getCommentsByPost = async (req, res) => {
     const postId = req.params.id; 
 
     if (!postId) {
@@ -63,7 +64,7 @@ export const getCommentsByPost = async (req, res) => {
     }
 };
 
-export const createComment = async (req, res) => {
+exports.createComment = async (req, res) => {
     try {
         const { content, user_id, post_id, parent_id } = req.body;
 
@@ -101,19 +102,19 @@ export const createComment = async (req, res) => {
     }
 };
 
-export const voteComment = async (req, res) => {
+exports.voteComment = async (req, res) => {
     const { id } = req.params; 
-    const { type } = req.body; 
+    const { type } = req.body; // 'up' hoặc 'down'
 
     if (!type || (type !== 'up' && type !== 'down')) {
-        return res.status(400).json({ success: false, message: "Loại vote không hợp lệ" });
+        return res.status(400).json({ success: false, message: "Loại vote không hợp lệ (chỉ 'up' hoặc 'down')" });
     }
 
     try {
         const result = await CommentModel.vote(id, type);
         
         if (result.affectedRows === 0) {
-            return res.status(404).json({ success: false, message: "Không tìm thấy bình luận" });
+            return res.status(404).json({ success: false, message: "Không tìm thấy bình luận để vote" });
         }
 
         res.json({ 

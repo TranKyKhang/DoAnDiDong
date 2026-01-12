@@ -1,24 +1,20 @@
-import db from "../config/db.js"; 
+const db = require("../config/db"); 
 
 const Post = {
-  getDetail: async (postId) => {
+  getDetail: (postId, callback) => {
     const query = `
       SELECT p.*, u.username as author_name, c.name as community_name
-      FROM posts p
-      JOIN users u ON p.id = u.id 
-      JOIN communities c ON p.id = c.id
+      FROM POSTS p
+      JOIN USERS u ON p.id = u.id
+      JOIN COMMUNITIES c ON p.id = c.id
       WHERE p.id = ?
     `;
-    
-    const [rows] = await db.query(query, [postId]);
-    return rows[0]; 
+    db.query(query, [postId], callback);
   },
 
-  getImages: async (postId) => {
-    const query = "SELECT id, image FROM post_images WHERE post_id = ?";
-    const [rows] = await db.query(query, [postId]);
-    return rows; 
+  getImages: (postId, callback) => {
+    db.query("SELECT image FROM POST_IMAGES WHERE post_id = ?", [postId], callback);
   }
 };
 
-export default Post;
+module.exports = Post;

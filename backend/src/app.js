@@ -3,32 +3,34 @@ import cors from "cors";
 import dotenv from "dotenv";
 
 import userRoutes from "./routes/user.routes.js";
-import postRoutes from "./routes/post.routes.js";
+import communityRoutes from "./routes/community.routes.js";
+import postRoutes from "./routes/posts.routes.js";
+import voteRoutes from "./routes/votes.routes.js";
 import commentRoutes from "./routes/comment.routes.js";
-import notificationRoutes from "./routes/notifications.routes.js";
+import notificationRoutes from  './routes/notifications.routes.js';
+import googleRoutes from './routes/google.routes.js';
 
-dotenv.config(); 
+dotenv.config({ quiet: true });
 
 const app = express();
-const PORT = process.env.PORT || 3000; 
 
 app.use(cors());
-app.use(express.json()); 
+app.use(express.json());
 
 app.get("/", (req, res) => {
   res.json({
     success: true,
-    message: "Server is running successfully!"
+    message: "running oke"
   });
 });
-
+app.use('/auth', googleRoutes);
+app.use('/auth', userRoutes);
+app.use("/upload", express.static("upload"));
 app.use("/api/users", userRoutes);
+app.use("/api/communities", communityRoutes);
 app.use("/api/posts", postRoutes);
+app.use("/api/votes", voteRoutes);
 app.use("/api/comments", commentRoutes);
 app.use('/api/notifications', notificationRoutes);
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
-
-export default app;
+export default app; 

@@ -1,7 +1,6 @@
-import express from "express";
-import * as commentController from "../controllers/comment.controller.js"; 
-
+const express = require("express");
 const router = express.Router();
+const commentController = require("../controllers/comment.controller");
 
 router.get("/post/:id", commentController.getCommentsByPost);
 
@@ -9,4 +8,4 @@ router.post("/", commentController.createComment);
 
 router.patch("/:id/vote", commentController.voteComment);
 
-export default router;
+module.exports = router;
