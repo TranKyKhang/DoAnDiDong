@@ -1,0 +1,10 @@
+[
+    {
+        "merged": "com.example.firebaseauthapp-mergeDebugResources-48:/layout/activity_auth.xml",
+        "source": "com.example.firebaseauthapp-main-51:/layout/activity_auth.xml"
+    },
+    {
+        "merged": "com.example.firebaseauthapp-mergeDebugResources-48:/layout/activity_main.xml",
+        "source": "com.example.firebaseauthapp-main-51:/layout/activity_main.xml"
+    }
+]
