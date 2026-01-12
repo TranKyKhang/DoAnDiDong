@@ -1,25 +1,24 @@
 import express from "express";
 import uploadAvatar from "../middlewares/uploadAvatar.middleware.js";
-import { updateProfile, getAllUsers } from "../controllers/user.controller.js";
-import { getUserById } from "../controllers/user.controller.js";
-
-const express = require('express');
 import { verifyToken } from '../middlewares/auth.middleware.js';
-const { googleLogin } = require('../controllers/google.controller');
+import { googleLogin } from '../controllers/google.controller.js';
 import {
   register,
   login,
   forgotPassword,
   verifyResetOtp
-} from '../controllers/auth.controller.js';
+} from '../controllers/auth.Controller.js';
 import {
+  getAllUsers,
+  getUserById,
   getProfile,
   updateProfile,
   changePassword
-} from '../controllers/user.controller.js';
+} from "../controllers/user.controller.js";
 
 const router = express.Router();
 
+// User update
 router.put(
   "/update-profile",
   uploadAvatar.fields([
@@ -30,23 +29,20 @@ router.put(
 );
 
 router.get("/", getAllUsers);
-
 router.get("/:id", getUserById);
 
-export default router; 
 // Auth routes
 router.post('/register', register);
 router.post('/login', login);
 router.post('/forgot-password', forgotPassword);
 router.post('/verify-reset-otp', verifyResetOtp);
+router.post('/google-login', googleLogin);
 
 // Profile routes (cần token)
 router.get('/profile', verifyToken, getProfile);
 router.put('/profile', verifyToken, updateProfile);
 router.post('/change-password', verifyToken, changePassword);
+router.get("/users", verifyToken, getAllUsers);
 
-module.exports = router;
-
-
-
-
+// Export ES Module
+export default router;

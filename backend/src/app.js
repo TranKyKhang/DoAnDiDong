@@ -8,7 +8,8 @@ import postRoutes from "./routes/posts.routes.js";
 import voteRoutes from "./routes/votes.routes.js";
 import commentRoutes from "./routes/comment.routes.js";
 import notificationRoutes from  './routes/notifications.routes.js';
-const googleRoutes = require('./routes/google.routes');
+import googleRoutes from './routes/google.routes.js';
+
 dotenv.config({ quiet: true });
 
 const app = express();
