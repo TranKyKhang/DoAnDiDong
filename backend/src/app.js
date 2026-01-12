@@ -6,6 +6,8 @@ import userRoutes from "./routes/user.routes.js";
 import communityRoutes from "./routes/community.routes.js";
 import postRoutes from "./routes/posts.routes.js";
 import voteRoutes from "./routes/votes.routes.js";
+import commentRoutes from "./routes/comment.routes";
+import notificationRoutes from  './routes/notifications.routes';
 
 dotenv.config({ quiet: true });
 
@@ -26,5 +28,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/communities", communityRoutes);
 app.use("/api/posts", postRoutes);
 app.use("/api/votes", voteRoutes);
+app.use("/api/comments", commentRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 export default app; 

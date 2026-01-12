@@ -1,6 +1,7 @@
 import express from "express";
 import upload from "../middlewares/uploadMedia.middleware.js";
 import  {updatePost} from "../controllers/posts.controller.js";
+import  {getPostDetail} from "../controllers/posts.controller.js";
 
 
 const router = express.Router();
@@ -13,5 +14,6 @@ router.put(
   ]),
   updatePost
 );
+router.get("/:id", getPostDetail);
 
 export default router; 
