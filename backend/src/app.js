@@ -6,8 +6,8 @@ import userRoutes from "./routes/user.routes.js";
 import communityRoutes from "./routes/community.routes.js";
 import postRoutes from "./routes/posts.routes.js";
 import voteRoutes from "./routes/votes.routes.js";
-import commentRoutes from "./routes/comment.routes";
-import notificationRoutes from  './routes/notifications.routes';
+import commentRoutes from "./routes/comment.routes.js";
+import notificationRoutes from  './routes/notifications.routes.js';
 
 dotenv.config({ quiet: true });
 
