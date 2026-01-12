@@ -8,7 +8,7 @@ import postRoutes from "./routes/posts.routes.js";
 import voteRoutes from "./routes/votes.routes.js";
 import commentRoutes from "./routes/comment.routes.js";
 import notificationRoutes from  './routes/notifications.routes.js';
-
+const googleRoutes = require('./routes/google.routes');
 dotenv.config({ quiet: true });
 
 const app = express();
@@ -22,7 +22,8 @@ app.get("/", (req, res) => {
     message: "running oke"
   });
 });
-
+app.use('/auth', googleRoutes);
+app.use('/auth', userRoutes);
 app.use("/upload", express.static("upload"));
 app.use("/api/users", userRoutes);
 app.use("/api/communities", communityRoutes);
