@@ -15,7 +15,8 @@ import com.example.appmangxahoi.view.component.AppPostItem
 
 @Composable
 fun PopularScreen(
-    topPadding: Dp = 0.dp // Nhận padding để tránh TopBar
+    topPadding: Dp = 0.dp, // Nhận padding để tránh TopBar
+    onPostClick: (Int) -> Unit
 ) {
     // Giả lập: Lấy các bài viết có subreddit là "r/funny" hoặc đảo ngẫu nhiên để làm "Popular"
     val popularPosts = mockPosts.shuffled()
@@ -30,7 +31,10 @@ fun PopularScreen(
         )
     ) {
         items(popularPosts) { post ->
-            AppPostItem(post = post)
+            AppPostItem(
+                post = post,
+                onItemClick = { onPostClick(post.id) } // <--- Gọi callback khi click
+            )
         }
     }
 }

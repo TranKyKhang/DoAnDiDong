@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -69,6 +70,7 @@ fun AppHomeScreen() {
         Scaffold(
             topBar = {
                 val isSearchRoute = currentRoute?.startsWith("search") == true
+                val isPostDetailRoute = currentRoute?.startsWith("post_detail") == true
                 when {
                     currentRoute == Screen.Profile.route -> {
                         ProfileTopBar(
@@ -86,8 +88,10 @@ fun AppHomeScreen() {
                     // Ẩn TopBar ở các màn hình này
                     currentRoute == "settings" ||
                             currentRoute == "create_group" ||
+                            currentRoute == "change_password" ||
                             currentRoute?.startsWith("community/") == true ||
-                            isSearchRoute -> { }
+                            isSearchRoute||
+                            isPostDetailRoute -> { }
 
                     // Màn Home/Popular/Inbox -> Hiện AppTopBar
                     else -> {
@@ -120,10 +124,13 @@ fun AppHomeScreen() {
             },
             bottomBar = {
                 val isSearchRoute = currentRoute?.startsWith("search") == true
+                val isPostDetailRoute = currentRoute?.startsWith("post_detail") == true
                 if (currentRoute != "settings" &&
                     currentRoute != "create_group" &&
                     !isSearchRoute &&
-                    currentRoute != Screen.Create.route
+                    currentRoute != Screen.Create.route &&
+                    !isPostDetailRoute &&
+                    currentRoute != "change_password"
                 ) {
                     AppBottomBar(navController = navController)
                 }
@@ -151,14 +158,22 @@ fun AppHomeScreen() {
                             bottom = 16.dp
                         )
                     ) {
-                        items(mockPosts) { post -> AppPostItem(post = post) }
+                        items(mockPosts) { post -> AppPostItem(
+                            post = post,
+                            onItemClick = {
+                            // Điều hướng sang màn hình chi tiết kèm ID bài viết
+                            navController.navigate("post_detail/${post.id}")
+                        }) }
                     }
                 }
 
                 // --- MÀN HÌNH POPULAR  ---
                 composable("popular") {
                     PopularScreen(
-                        topPadding = innerPadding.calculateTopPadding()
+                        topPadding = innerPadding.calculateTopPadding(),
+                        onPostClick = { postId ->
+                            navController.navigate("post_detail/$postId") // Điều hướng tại đây
+                        }
                     )
                 }
 
@@ -194,8 +209,16 @@ fun AppHomeScreen() {
 
                 // Các màn hình phụ khác
                 composable("settings") {
-                    SettingScreen(onBackClick = { navController.popBackStack() })
+                    SettingScreen(
+                        onBackClick = { navController.popBackStack() },
+                        onChangePasswordClick = { navController.navigate("change_password")})
                 }
+                composable("change_password") {
+                    ChangePasswordScreen(
+                        onBackClick = { navController.popBackStack() }
+                    )
+                }
+
 
                 composable("create_group") {
                     CreateGroupScreen(
@@ -211,6 +234,21 @@ fun AppHomeScreen() {
                         onBackClick = { navController.popBackStack() },
                         onSearchClick = { navController.navigate("search?community=$communityName") }
                     )
+                }
+
+                composable(
+                    route = "post_detail/{postId}", // Định nghĩa đường dẫn có tham số
+                    arguments = listOf(navArgument("postId") { type = NavType.IntType }) // Khai báo kiểu dữ liệu là Int
+                ) { backStackEntry ->
+                    // Lấy ID từ đường dẫn
+                    val postId = backStackEntry.arguments?.getInt("postId")
+
+                    if (postId != null) {
+                        PostDetailScreen(
+                            postId = postId,
+                            onBackClick = { navController.popBackStack() } // Xử lý nút Back
+                        )
+                    }
                 }
             }
         }

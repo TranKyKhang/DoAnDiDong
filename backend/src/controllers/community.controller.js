@@ -215,3 +215,173 @@ export const changeRole = async (req, res) => {
     });
   }
 };
+
+
+
+// Huy
+// Tao cong dong
+export const createCommunities = async (req, res) => {
+    // Lay du lieu tu client
+    const { name, description, user_id } = req.body;
+
+    if (!name || !user_id) {
+        return res.status(400).json({ message: "Tên cộng đồng và ID người tạo là bắt buộc!" });
+    }
+    try {
+        const checkQuery = 'SELECT id FROM communities WHERE name = ?';
+        const [existing] = await db.query(checkQuery, [name]);
+
+        if (existing.length > 0) {
+            return res.status(409).json({ message: "Tên cộng đồng này đã tồn tại!" });
+        }
+
+        // 1. Them cong dong moi vao DB
+        const insertQuery = `
+            INSERT INTO communities (name, description, user_id) 
+            VALUES (?, ?, ?)
+        `;
+        const [result] = await db.query(insertQuery, [name, description, user_id]); 
+        const newCommunityId = result.insertId; 
+
+        await db.query(
+            'INSERT INTO users_communities (community_id, user_id,role) VALUES (?, ?,"moderator"))', 
+            [newCommunityId, user_id]
+        );
+
+        // Tra ve ket qua thanh cong
+        return res.status(201).json({
+            message: "Tạo cộng đồng thành công",
+            communityId: newCommunityId,
+            data: {
+                name: name,
+                description: description
+            }
+        });
+
+    } catch (error) {
+        console.error("Lỗi tạo tự động: ", error);
+        return res.status(500).json({ message: "Lỗi Server", error: error.message });
+    }
+};
+
+// Hàm lấy danh sách cộng đồng mà user đã tham gia
+export const getCommunitiesByUser = async (req, res) => {
+    const userId = req.params.userId;
+
+    if (!userId) {
+        return res.status(400).json({ message: "Thiếu User ID" });
+    }
+
+    try {
+        //Kết 2 bảng để lấy thông tin cộng đồng + role của user
+        const sql = `
+            SELECT c.*, uc.role 
+            FROM communities c
+              JOIN users_communities uc ON c.id = uc.community_id
+            WHERE uc.user_id = ?
+        `;
+
+        const [rows] = await db.query(sql, [userId]);
+
+        return res.status(200).json({
+            message: "Lấy danh sách cộng đồng của user thành công",
+            data: rows
+        });
+    } catch (error) {
+        console.error("Lỗi lấy danh sách theo user: ", error);
+        return res.status(500).json({ message: "Lỗi Server", error: error.message });
+    }
+};
+// Tham gia cong dong
+export const joinCommunity=async(req,res)=>{
+  //Lay user tam thoi 
+  const {user_id,community_id}=req.body
+  if(!user_id||!community_id){
+    return res.status(400).json({message:"Thiếu user_id hoặc community_id !"});
+  }
+  try{
+    const checkQuery = "SELECT * FROM users_communities WHERE user_id = ? AND community_id = ?";
+    const [existing] = await db.query(checkQuery, [user_id, community_id]);
+    if (existing.length > 0) {
+      return res.status(409).json({ message: "Bạn đã tham gia cộng đồng này rồi!" });
+    }
+
+    // Thêm vào bảng (Mặc định role là Member)
+    const insertQuery = "INSERT INTO users_communities (user_id, community_id, role) VALUES (?, ?, 'member')";
+    if (existing.length > 0) {
+      return res.status(409).json({ message: "Bạn đã tham gia cộng đồng này rồi!" });
+    }
+    await db.query(insertQuery, [user_id, community_id]);
+    return res.status(200).json({ message: "Tham gia thành công!" });
+    
+  }catch(error){
+    console.error("Lỗi join community: ", error);
+    return res.status(500).json({ message: "Lỗi Server", error: error.message });
+  }
+
+};
+//Roi cong dong
+export const leaveCommunity = async (req, res) => {
+    const { user_id, community_id } = req.body;
+
+    if (!user_id || !community_id) {
+        return res.status(400).json({ message: "Thiếu user_id hoặc community_id" });
+    }
+
+    try {
+      const deleteQuery = "DELETE FROM users_communities WHERE user_id = ? AND community_id = ?";
+      const [result] = await db.query(deleteQuery, [user_id, community_id]);
+
+      // Kiểm tra xem có xóa được dòng nào không
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: "Bạn chưa tham gia cộng đồng này nên không thể rời!" });
+      }
+      return res.status(200).json({ message: "Đã rời cộng đồng thành công." });
+
+    }catch (error) {
+      console.error("Lỗi leave community: ", error);
+      return res.status(500).json({ message: "Lỗi Server", error: error.message });
+    }
+};
+
+//Xem thong tin cong dong 
+export const getCommunityDetails=async(req,res)=>{
+  const id = req.params.id;
+  if(!id) return res.status(400).json({message:"Thiếu trường id !"});
+  try{
+    const details="SELECT * FROM communities WHERE id=?";
+    const [result] = await db.query(details, [id]);
+    return res.status(200).json({
+      message: "Lấy thông tin cộng đồng thành công",
+      data: result[0]
+    });
+
+  } catch (error) {
+      console.error("Lỗi lấy thông tin cộng đồng: ", error);
+      return res.status(500).json({ message: "Lỗi Server", error: error.message });
+    }
+};
+//Danh sach bai viet theo tung cong dong
+export const getPostCommunityByID=async(req,res)=>{
+  const community_id = req.params.community_id;
+  if(!community_id) return res.status(400).json({message:"Thiếu trường id !"});
+  try{
+    const sql = `
+      SELECT p.*, u.username, u.avatar 
+      FROM posts p
+        JOIN users u ON p.user_id = u.id
+      WHERE p.community_id = ?
+      ORDER BY p.created_at DESC
+    `;
+    const [result] = await db.query(sql, [community_id]);
+    return res.status(200).json({
+      message: "Lấy thông tin danh sách bài viết thành công !",
+      count: result.length,
+      data: result
+    });
+
+  } catch (error) {
+      console.error("Lỗi lấy thông tin danh sách bài viết: ", error);
+      return res.status(500).json({ message: "Lỗi Server", error: error.message });
+    }
+};
