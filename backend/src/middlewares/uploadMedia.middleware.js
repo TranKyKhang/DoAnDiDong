@@ -9,6 +9,10 @@ const storage = multer.diskStorage({
     } else if (file.fieldname === "video") {
       cb(null, "upload/posts/videos"); 
     }
+    // Xu li icon va banner cho cong dong
+    else if (file.fieldname === "icon" || file.fieldname === "banner") {
+      cb(null, "upload/communities"); 
+    }
   },
   filename: (req, file, cb) => {
 
@@ -24,7 +28,9 @@ const fileFilter = (req, file, cb) => {
   const videoTypes = /mp4|mov|avi|mkv/;
   const ext = path.extname(file.originalname).toLowerCase();
 
-  if (file.fieldname === "images" && imageTypes.test(ext)) {
+  if ((file.fieldname === "images" ||  
+     file.fieldname === "icon" ||   
+     file.fieldname === "banner") && imageTypes.test(ext)) {
     cb(null, true);
   } else if (file.fieldname === "video" && videoTypes.test(ext)) {
     cb(null, true);
