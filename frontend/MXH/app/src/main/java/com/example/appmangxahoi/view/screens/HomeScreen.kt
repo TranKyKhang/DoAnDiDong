@@ -1,5 +1,6 @@
 package com.example.appmangxahoi.view.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -22,6 +23,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.appmangxahoi.controller.CommunityController
 import com.example.appmangxahoi.model.mockPosts
 import com.example.appmangxahoi.view.component.CreatePostTopBar
 import com.example.appmangxahoi.view.component.AppBottomBar
@@ -29,23 +31,53 @@ import com.example.appmangxahoi.view.component.AppDrawer
 import com.example.appmangxahoi.view.component.AppPostItem
 import com.example.appmangxahoi.view.component.AppTopBar
 import com.example.appmangxahoi.controller.Screen
+import com.example.appmangxahoi.model.CommunityModel
+import com.example.appmangxahoi.ui.screens.CreatePostScreen
 import com.example.appmangxahoi.view.component.ProfileTopBar
 import kotlinx.coroutines.launch
-
+import androidx.compose.runtime.livedata.observeAsState
 @Composable
 fun AppHomeScreen() {
     val context = LocalContext.current
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
-
-    // --- LOGIC XÁC ĐỊNH TIÊU ĐỀ FEED ---
-    // Nếu đang ở màn hình "popular" thì hiển thị tiêu đề là "Popular", ngược lại là "Home"
     val currentFeedTitle = if (currentRoute == "popular") "Popular" else "Home"
 
     var isPostButtonEnabled by remember { mutableStateOf(false) }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+
+    // --- KHAI BÁO CONTROLLER VÀ STATE ---
+    val communityController = remember { CommunityController() }
+    var communityList by remember { mutableStateOf<List<CommunityModel>>(emptyList()) }
+    val currentUserId = 5
+    // --- HÀM LOAD DATA (Tách ra để dùng lại) ---
+    fun loadCommunities() {
+        scope.launch {
+            val list = communityController.getCommunitiesByUser(currentUserId)
+            communityList = list
+        }
+    }
+    // --- LOAD LẦN ĐẦU KHI MỞ APP ---
+    LaunchedEffect(Unit) {
+        loadCommunities()
+    }
+    // --- LẮNG NGHE TÍN HIỆU TỪ MÀN HÌNH CREATE_GROUP ---
+    // Lấy entry hiện tại (Home)
+    val currentEntry by navController.currentBackStackEntryAsState()
+    // Theo dõi biến "refresh_communities" trong savedStateHandle
+    val refreshNeeded = currentEntry?.savedStateHandle
+        ?.getLiveData<Boolean>("refresh_communities")
+        ?.observeAsState()
+    // Khi refreshNeeded đổi thành true -> Load lại list
+    LaunchedEffect(refreshNeeded?.value) {
+        if (refreshNeeded?.value == true) {
+            loadCommunities() // Gọi API lấy lại danh sách
+            // Xóa cờ để tránh load lặp lại
+            currentEntry?.savedStateHandle?.remove<Boolean>("refresh_communities")
+        }
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -58,6 +90,7 @@ fun AppHomeScreen() {
                         navController.navigate("community/$safeName")
                     }
                 },
+                communities = communityList,
                 onCreateGroupClick = {
                     scope.launch {
                         drawerState.close()
@@ -161,9 +194,9 @@ fun AppHomeScreen() {
                         items(mockPosts) { post -> AppPostItem(
                             post = post,
                             onItemClick = {
-                            // Điều hướng sang màn hình chi tiết kèm ID bài viết
-                            navController.navigate("post_detail/${post.id}")
-                        }) }
+                                // Điều hướng sang màn hình chi tiết kèm ID bài viết
+                                navController.navigate("post_detail/${post.id}")
+                            }) }
                     }
                 }
 
@@ -221,9 +254,28 @@ fun AppHomeScreen() {
 
 
                 composable("create_group") {
+                    val context = LocalContext.current
+                    val scope = rememberCoroutineScope() // Cần scope để chạy suspend function
+                    val controller = remember { CommunityController() } // Khởi tạo controller
+
                     CreateGroupScreen(
                         onDismiss = { navController.popBackStack() },
-                        onCreate = { navController.popBackStack() }
+                        onCreate = { data ->
+                            scope.launch {
+                                val success = controller.createCommunity(context, data)
+                                if (success) {
+                                    // BƯỚC QUAN TRỌNG: Báo hiệu cho màn hình trước biết cần reload
+                                    navController.previousBackStackEntry
+                                        ?.savedStateHandle
+                                        ?.set("refresh_communities", true)
+
+                                    // Sau đó mới quay về
+                                    navController.popBackStack()
+                                } else {
+                                    Toast.makeText(context, "Lỗi tạo cộng đồng", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
                     )
                 }
 

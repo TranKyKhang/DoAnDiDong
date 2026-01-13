@@ -1,16 +1,22 @@
-package com.example.appmangxahoi.view.screens
+package com.example.appmangxahoi.ui.screens
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.Poll
@@ -29,39 +35,88 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 
+// Data mẫu cho cộng đồng
+data class CommunityOption(val id: String, val name: String, val iconUrl: String?)
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreatePostScreen(
     onContentChange: (Boolean) -> Unit
 ) {
     var title by remember { mutableStateOf("") }
     var body by remember { mutableStateOf("") }
-
-    // 1. Biến lưu đường dẫn ảnh/video được chọn (Uri)
     var selectedUri by remember { mutableStateOf<Uri?>(null) }
-    // 2. Biến đánh dấu xem đang chọn Video hay Ảnh
     var isVideo by remember { mutableStateOf(false) }
 
-    // 3. Công cụ mở thư viện (Photo Picker)
+    // --- LOGIC CHỌN CỘNG ĐỒNG ---
+    // 1. Trạng thái hiển thị BottomSheet
+    var showBottomSheet by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState()
+
+    // 2. Cộng đồng đang chọn (Null = Trang cá nhân)
+    var selectedCommunity by remember { mutableStateOf<CommunityOption?>(null) }
+
+    // 3. Mock Data các cộng đồng
+    val communities = listOf(
+        CommunityOption("1", "r/android_dev", "https://picsum.photos/50"),
+        CommunityOption("2", "r/vietnam_travel", "https://picsum.photos/51"),
+        CommunityOption("3", "r/meme_daily", "https://picsum.photos/52")
+    )
+
     val mediaPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? ->
-        // Khi người dùng chọn xong, lưu Uri lại
         if (uri != null) {
             selectedUri = uri
         }
     }
 
-    // Logic kiểm tra nút "Đăng" (Có tiêu đề HOẶC có ảnh thì mới cho đăng)
     LaunchedEffect(title, selectedUri) {
         onContentChange(title.isNotEmpty() || selectedUri != null)
     }
 
+    // --- GIAO DIỆN CHÍNH ---
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
             .padding(16.dp)
     ) {
+        // === 1. NÚT CHỌN NƠI ĐĂNG (MỚI THÊM) ===
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(bottom = 16.dp)
+        ) {
+            // Nút bấm mở BottomSheet
+            Surface(
+                onClick = { showBottomSheet = true },
+                shape = RoundedCornerShape(20.dp),
+                color = Color(0xFFF0F0F0), // Màu xám nhẹ
+                modifier = Modifier.height(40.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 12.dp)
+                ) {
+                    // Icon (Nếu chọn Profile thì hiện hình người, Cộng đồng thì hiện hình Trái đất)
+                    val icon = if (selectedCommunity == null) Icons.Default.Person else Icons.Default.Public
+                    Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.Gray)
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    // Tên hiển thị
+                    Text(
+                        text = selectedCommunity?.name ?: "Trang cá nhân (u/otis)", // Nếu null thì hiện Profile
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
+
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, modifier = Modifier.size(18.dp))
+                }
+            }
+        }
+
         // --- PHẦN NHẬP TEXT ---
         TextField(
             value = title,
@@ -95,15 +150,14 @@ fun CreatePostScreen(
                 .weight(1f)
         )
 
-        // --- 4. KHU VỰC PREVIEW (HIỂN THỊ ẢNH/VIDEO ĐÃ CHỌN) ---
+        // --- PREVIEW ẢNH/VIDEO (CŨ) ---
         if (selectedUri != null) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(200.dp) // Chiều cao khung xem trước
+                    .height(200.dp)
                     .padding(vertical = 8.dp)
             ) {
-                // Hiển thị ảnh (Hoặc ảnh bìa video)
                 AsyncImage(
                     model = selectedUri,
                     contentDescription = null,
@@ -114,7 +168,6 @@ fun CreatePostScreen(
                         .background(Color.LightGray)
                 )
 
-                // Nếu là Video -> Hiện thêm nút Play ở giữa để nhận biết
                 if (isVideo) {
                     Icon(
                         imageVector = Icons.Filled.PlayCircle,
@@ -127,9 +180,8 @@ fun CreatePostScreen(
                     )
                 }
 
-                // Nút Xóa ảnh (Góc trên phải)
                 IconButton(
-                    onClick = { selectedUri = null }, // Xóa Uri đi
+                    onClick = { selectedUri = null },
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(4.dp)
@@ -141,34 +193,90 @@ fun CreatePostScreen(
             }
         }
 
-        // --- 5. THANH CÔNG CỤ ---
+        // --- TOOLBAR (CŨ) ---
         HorizontalDivider(thickness = 0.5.dp, color = Color.LightGray)
         Row(
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceAround
         ) {
             AttachmentIcon(Icons.Outlined.Link, onClick = {})
-
-            // Nút chọn ẢNH
             AttachmentIcon(Icons.Outlined.Image, onClick = {
-                isVideo = false // Đánh dấu là ảnh
-                // Mở thư viện chỉ lọc ảnh
+                isVideo = false
                 mediaPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
             })
-
-            // Nút chọn VIDEO
             AttachmentIcon(Icons.Outlined.VideoLibrary, onClick = {
-                isVideo = true // Đánh dấu là video
-                // Mở thư viện chỉ lọc video
+                isVideo = true
                 mediaPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly))
             })
-
             AttachmentIcon(Icons.Outlined.Poll, onClick = {})
+        }
+    }
+
+    // === 2. BOTTOM SHEET ĐỂ CHỌN CỘNG ĐỒNG (MỚI THÊM) ===
+    if (showBottomSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showBottomSheet = false },
+            sheetState = sheetState
+        ) {
+            Column(modifier = Modifier.padding(bottom = 32.dp)) {
+                Text(
+                    "Chọn nơi đăng",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(16.dp)
+                )
+
+                // Lựa chọn 1: Trang cá nhân
+                ListItem(
+                    headlineContent = { Text("Trang cá nhân của bạn", fontWeight = FontWeight.Bold) },
+                    leadingContent = {
+                        Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(40.dp))
+                    },
+                    trailingContent = {
+                        // Hiện dấu tick nếu đang chọn
+                        if (selectedCommunity == null) {
+                            Text("✓", color = Color.Blue, fontWeight = FontWeight.Bold)
+                        }
+                    },
+                    modifier = Modifier.clickable {
+                        selectedCommunity = null // Chọn trang cá nhân
+                        showBottomSheet = false
+                    }
+                )
+
+                HorizontalDivider()
+
+                Text("Cộng đồng của bạn", modifier = Modifier.padding(16.dp), color = Color.Gray)
+
+                // Lựa chọn 2: Danh sách cộng đồng
+                LazyColumn {
+                    items(communities) { community ->
+                        ListItem(
+                            headlineContent = { Text(community.name) },
+                            leadingContent = {
+                                AsyncImage(
+                                    model = community.iconUrl,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(40.dp).clip(CircleShape).background(Color.LightGray)
+                                )
+                            },
+                            trailingContent = {
+                                if (selectedCommunity?.id == community.id) {
+                                    Text("✓", color = Color.Blue, fontWeight = FontWeight.Bold)
+                                }
+                            },
+                            modifier = Modifier.clickable {
+                                selectedCommunity = community // Lưu cộng đồng đã chọn
+                                showBottomSheet = false
+                            }
+                        )
+                    }
+                }
+            }
         }
     }
 }
 
-// Cập nhật hàm AttachmentIcon để nhận sự kiện click
 @Composable
 fun AttachmentIcon(icon: ImageVector, onClick: () -> Unit) {
     IconButton(onClick = onClick) {

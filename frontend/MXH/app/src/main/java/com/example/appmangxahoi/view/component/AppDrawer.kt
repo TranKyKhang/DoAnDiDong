@@ -33,32 +33,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-
-// 1. Tạo Data Class đơn giản cho Cộng đồng (Subreddit)
-data class Community(
-    val name: String,
-    val avatarUrl: String,
-    val isFavorite: Boolean = false
-)
-
-// 2. Dữ liệu giả lập các cộng đồng đang follow
-val followedCommunities = listOf(
-    Community("r/androiddev", "https://images.unsplash.com/photo-1607252650355-f7fd0460ccdb?w=100"),
-    Community("r/kotlin", "https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=100"),
-    Community("r/vietnam", "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100"),
-    Community("r/funny", "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=100"),
-    Community("r/technology", "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=100"),
-    Community("r/pics", "https://images.unsplash.com/photo-1504194104404-433180773017?w=100")
-)
+import com.example.appmangxahoi.model.CommunityModel
 
 @Composable
 fun AppDrawer(
+    communities: List<CommunityModel>,
     onItemClick: (String) -> Unit = {},
     onCreateGroupClick: () -> Unit = {}
 ) {
     ModalDrawerSheet(
         drawerContainerColor = Color.White,
-        modifier = Modifier.width(300.dp) // Giới hạn chiều rộng drawer cho đẹp
+        modifier = Modifier.width(300.dp) // Giới hạn chiều rộng drawer
     ) {
         // --- Header của Drawer ---
         Column(modifier = Modifier.padding(16.dp)) {
@@ -72,7 +57,7 @@ fun AppDrawer(
             modifier = Modifier.fillMaxHeight(),
             contentPadding = PaddingValues(vertical = 8.dp)
         ){
-            // Section 2: Cộng đồng của bạn
+            // Section Tiêu đề + Nút thêm
             item {
                 Row(
                     modifier = Modifier
@@ -86,44 +71,52 @@ fun AppDrawer(
                         style = MaterialTheme.typography.labelSmall,
                         color = Color.Gray
                     )
-                    // Nút tạo cộng đồng mới (tùy chọn)
                     IconButton(
-                        onClick = onCreateGroupClick, // Gọi hàm khi bấm
+                        onClick = onCreateGroupClick,
                         modifier = Modifier.size(24.dp)
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = "Create Group", tint = Color.Gray)
+                        Icon(Icons.Default.Add, contentDescription = "Tạo nhóm mới", tint = Color.Gray)
                     }
                 }
             }
 
-            // Render danh sách dynamic từ List
-            items(followedCommunities) { community ->
-                NavigationDrawerItem(
-                    label = {
-                        Text(
-                            text = community.name,
-                            fontWeight = FontWeight.Medium
-                        )
-                    },
-                    icon = {
-                        // Hiển thị Avatar tròn
-                        AsyncImage(
-                            model = community.avatarUrl,
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .size(24.dp) // Kích thước chuẩn cho icon menu
-                                .clip(CircleShape)
-                                .background(Color.LightGray)
-                        )
-                    },
-                    selected = false, // Xử lý logic chọn sau này
-                    onClick = {
-                        onItemClick(community.name) // <--- TRUYỀN TÊN CỘNG ĐỒNG RA NGOÀI
-                    },
-                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
-
-                )
+            // 2. Render danh sách từ dữ liệu API
+            if (communities.isEmpty()) {
+                item {
+                    Text(
+                        text = "Chưa tham gia cộng đồng nào",
+                        modifier = Modifier.padding(start = 24.dp, top = 8.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray
+                    )
+                }
+            } else {
+                items(communities) { community ->
+                    NavigationDrawerItem(
+                        label = {
+                            Text(
+                                text = "r/${community.name}",
+                                fontWeight = FontWeight.Medium
+                            )
+                        },
+                        icon = {
+                            AsyncImage(
+                                model = community.icon ?: "https://ui-avatars.com/api/?name=${community.name}&background=random",
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.LightGray)
+                            )
+                        },
+                        selected = false,
+                        onClick = {
+                            onItemClick(community.name)
+                        },
+                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                    )
+                }
             }
         }
     }
