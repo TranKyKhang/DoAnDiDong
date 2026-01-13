@@ -40,7 +40,11 @@ router.post('/google-login', googleLogin);
 
 // Profile routes (cần token)
 router.get('/profile', verifyToken, getProfile);
-router.put('/profile', verifyToken, updateProfile);
+router.put('/profile-update', verifyToken, uploadAvatar.fields([
+    { name: "avatar", maxCount: 1 },
+    { name: "banner", maxCount: 1 }
+  ]),
+  updateProfile);
 router.post('/change-password', verifyToken, changePassword);
 router.get("/users", verifyToken, getAllUsers);
 
