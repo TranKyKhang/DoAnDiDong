@@ -5,13 +5,15 @@ import com.example.appmangxahoi.model.DataClassComment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 
 class Comment {
     private val client = OkHttpClient()
-    private val URL = "http://10.0.2.2:3000" // Hoặc IP máy thật của bạn
+    private val URL = "http://10.0.2.2:3000"
 
     suspend fun getComments(postID: Int): List<DataClassComment>? = withContext(Dispatchers.IO) {
         try {
@@ -53,10 +55,36 @@ class Comment {
             return@withContext null
         }
     }
+    suspend fun postComment(
+        postId: Int,
+        userId: Int,
+        content: String,
+        parentCommentId: Int? = null
+    ): Boolean = withContext(Dispatchers.IO){
+        try {
+            val json = JSONObject().apply {
+                put("post_id", postId)
+                put("user_id", userId)
+                put("content", content)
+                if (parentCommentId != null) {
+                    put("parent_id", parentCommentId) // Backend cần trường này để biết là reply
+                }
+            }
+            val mediaType = "application/json; charset=utf-8".toMediaType()
+            val requestBody = json.toString().toRequestBody(mediaType)
 
-    // --- HÀM ĐỆ QUY LÀM PHẲNG DANH SÁCH ---
-    // Input: List dạng cây (cha chứa con)
-    // Output: List phẳng (cha rồi đến con, rồi đến cháu...)
+            val req = Request.Builder()
+                .url("$URL/api/comments")
+                .post(requestBody)
+                .build()
+            client.newCall(req).execute().use { resp ->
+                return@withContext resp.isSuccessful
+            }
+        }catch (e: Exception) {
+            e.printStackTrace()
+            return@withContext false
+        }
+    }
     private fun flattenComments(comments: List<DataClassComment>): List<DataClassComment> {
         val result = mutableListOf<DataClassComment>()
         for (comment in comments) {

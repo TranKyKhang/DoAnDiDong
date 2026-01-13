@@ -1,5 +1,7 @@
 package com.example.appmangxahoi.view.screens
 
+import android.os.Build
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -34,8 +36,17 @@ import com.example.appmangxahoi.model.DataClassComment
 import com.example.appmangxahoi.model.UserModel
 import com.example.appmangxahoi.view.component.VoteActionPill
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.ui.text.LinkAnnotation
+import com.example.appmangxahoi.controller.Communities
+import com.example.appmangxahoi.controller.Notification
+import com.example.appmangxahoi.model.DataClassCommunities
+import kotlinx.coroutines.launch
 
 import java.text.SimpleDateFormat
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 import java.util.Locale
 import java.util.TimeZone
 
@@ -47,19 +58,49 @@ fun PostDetailScreen(
 ) {
     // 1. STATE QUẢN LÝ DỮ LIỆU TỪ API
     var post by remember { mutableStateOf<DCPost?>(null) }
+    var community by remember { mutableStateOf<DataClassCommunities?>(null) }
     var profile by remember { mutableStateOf<UserModel?>(null) }
     var commentsList by remember { mutableStateOf<List<DataClassComment>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
+    var replyToComment by remember { mutableStateOf<DataClassComment?>(null) }
 
     val currentPost = post
+    val currentCommunity = community
     val currentProfile = profile
+
     val commentController = remember { Comment() }
     val userController = remember { User() }
+    val communityController = remember { Communities() }
+    val notificationController = remember { Notification() }
 
+    val scope = rememberCoroutineScope()
+    val currentUserId = 6
+    ///
+    fun refreshComments() {
+        scope.launch {
+            val newComments = commentController.getComments(postId)
+            if (newComments != null) commentsList = newComments
+        }
+    }
+    fun refreshData() {
+        scope.launch {
+            // A. Tải lại danh sách comment mới
+            val newComments = commentController.getComments(postId)
+            if (newComments != null) {
+                commentsList = newComments
+            }
+
+            // B. Tải lại chi tiết bài viết (để cập nhật số lượng comment_count)
+            val updatedPost = PostDetail().getPostDetail(postId)
+            if (updatedPost != null) {
+                post = updatedPost
+            }
+        }
+    }
     // 2. GỌI API KHI MÀN HÌNH ĐƯỢC MỞ
     LaunchedEffect(postId) {
         // Gọi hàm getPostDetail từ Controller bạn đã viết
-        val result = PostDetail().getPostDetail(1)
+        val result = PostDetail().getPostDetail(postId)
         post = result
         if (result != null) {
             val commentsResult = commentController.getComments(result.id)
@@ -70,6 +111,8 @@ fun PostDetailScreen(
             // 3. Lấy thông tin user của bài viết
             val userResult = userController.getUserProfile(result.user_id)
             profile = userResult
+            val communityResult = communityController.getDetail(result.community_id)
+            community = communityResult
         }
         isLoading = false
     }
@@ -80,11 +123,6 @@ fun PostDetailScreen(
             profile = userController.getUserProfile(userId)
         }
     }
-
-
-    // State để quản lý việc đang reply ai (để hiện tên dưới thanh chat)
-    //var replyingTo by remember { mutableStateOf<String?>(null) }
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -100,7 +138,7 @@ fun PostDetailScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
                             // Hiển thị tạm ID vì API chưa có tên Author/Community
-                            Text("Community #${currentPost.community_id}", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            Text("${currentCommunity?.name}", fontSize = 14.sp, fontWeight = FontWeight.Bold)
                             val displayName = if (currentProfile != null) {
                                 currentProfile.displayName ?: "User ${currentPost.user_id}"
                             } else {
@@ -123,9 +161,46 @@ fun PostDetailScreen(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
             )
         },
-//        bottomBar = {
-//            CommentInputBar(replyingTo = replyingTo, onCancelReply = { replyingTo = null })
-//        }
+        bottomBar = {
+            CommentInputBar(
+                reply = replyToComment,
+                onCancel = { replyToComment = null },
+                onSendClick = {content ->
+                    scope.launch {
+                        val parentId = replyToComment?.id
+                        val success = commentController.postComment(postId, currentUserId, content, parentId)
+
+                        if (success) {
+                            val recipientId = if (replyToComment != null) {
+                                replyToComment!!.user_id // Nếu reply -> Gửi cho chủ comment
+                            } else {
+                                currentPost?.user_id ?: 0 // Nếu comment gốc -> Gửi cho chủ bài viết
+                            }
+                            if (recipientId != 0 && recipientId != currentUserId){
+                                val notiContent = if (replyToComment != null) {
+                                    "$userId đã trả lời bình luận của bạn: \"$content\""
+                                } else {
+                                    "$userId đã bình luận bài viết của bạn: \"$content\""
+                                }
+                                notificationController.postNotification(
+                                    type = "comment",
+                                    content = notiContent,
+                                    recipientId = recipientId,
+                                    senderId = currentUserId,
+                                    postId = postId,
+                                    commentId = parentId // Lưu lại ID comment cha nếu có
+                                )
+                            }
+                            refreshData()
+                            replyToComment = null
+                            //refreshComments()
+                        } else {
+                            //Toast.makeText(it, "", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            )
+        }
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize().padding(paddingValues)){
             // --- TRƯỜNG HỢP 1: ĐANG TẢI ---
@@ -153,7 +228,10 @@ fun PostDetailScreen(
                             }
 
                             if (currentPost.video.isNullOrEmpty() && currentPost.images.isNotEmpty()) {
+
                                 currentPost.images.forEach { postImage ->
+                                    val BASE_URL = "http://10.0.2.2:3000"
+                                    val fullImageUrl = "$BASE_URL${postImage.image}"
                                     AsyncImage(
                                         model = postImage.image, // URL ảnh
                                         contentDescription = null,
@@ -198,13 +276,16 @@ fun PostDetailScreen(
                         }
                     }else {
                         items(commentsList) { comment ->
-                            CommentItem(comment = comment)
+                            CommentItem(
+                                comment = comment,
+                                onReplyClick = {selected ->
+                                    replyToComment = selected
+                                }
+                            )
 
                         }
                     }
-
                     item { Spacer(modifier = Modifier.height(20.dp)) }
-
                 }
             }
         }
@@ -213,7 +294,8 @@ fun PostDetailScreen(
 
 @Composable
 fun CommentItem(
-    comment: DataClassComment
+    comment: DataClassComment,
+    onReplyClick: (DataClassComment) -> Unit
 ) {
     // Tính toán độ thụt lề: Cấp 0 = 16dp, Cấp 1 = 16 + 32 = 48dp...
     val paddingLeft = (16 + (comment.depth_level * 32)).dp
@@ -285,9 +367,9 @@ fun CommentItem(
                         color = Color.Gray,
                         modifier = Modifier.clickable(
                             interactionSource = interactionSource,
-                            indication = null // Tắt hiệu ứng ripple tạm thời để tránh crash
+                            indication = null
                         ) {
-                            /* Handle reply logic */
+                            onReplyClick(comment)
                         }
                     )
                 }
@@ -297,74 +379,98 @@ fun CommentItem(
         HorizontalDivider(color = Color(0xFFEEEEEE), thickness = 1.dp)
     }
 }
-// Thanh nhập comment được nâng cấp để hiển thị trạng thái Reply
-//@Composable
-//fun CommentInputBar(
-//    replyingTo: String?,
-//    onCancelReply: () -> Unit
-//) {
-//    Column {
-//        HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f))
-//
-//        // Hiển thị dòng "Đang trả lời..." nếu có
-//        if (replyingTo != null) {
-//            Row(
-//                modifier = Modifier
-//                    .fillMaxWidth()
-//                    .background(Color(0xFFF2F2F2))
-//                    .padding(horizontal = 16.dp, vertical = 4.dp),
-//                verticalAlignment = Alignment.CenterVertically,
-//                horizontalArrangement = Arrangement.SpaceBetween
-//            ) {
-//                Text("Đang trả lời $replyingTo", fontSize = 12.sp, color = Color.Gray)
-//                Text(
-//                    "Hủy",
-//                    fontSize = 12.sp,
-//                    fontWeight = FontWeight.Bold,
-//                    color = Color.Red,
-//                    modifier = Modifier.clickable { onCancelReply() }
-//                )
-//            }
-//        }
-//
-//        Row(
-//            modifier = Modifier
-//                .fillMaxWidth()
-//                .background(Color.White)
-//                .padding(8.dp),
-//            verticalAlignment = Alignment.CenterVertically
-//        ) {
-//            TextField(
-//                value = "",
-//                onValueChange = {},
-//                placeholder = { Text(if (replyingTo != null) "Trả lời $replyingTo..." else "Viết bình luận...") },
-//                modifier = Modifier
-//                    .weight(1f)
-//                    .clip(RoundedCornerShape(24.dp))
-//                    .background(Color(0xFFF2F2F2)),
-//                colors = TextFieldDefaults.colors(
-//                    focusedContainerColor = Color(0xFFF2F2F2),
-//                    unfocusedContainerColor = Color(0xFFF2F2F2),
-//                    focusedIndicatorColor = Color.Transparent,
-//                    unfocusedIndicatorColor = Color.Transparent
-//                ),
-//                shape = RoundedCornerShape(24.dp)
-//            )
-//            IconButton(onClick = {}) {
-//                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send", tint = Color(0xFF0079D3))
-//            }
-//        }
-//    }
-//}
+@Composable
+fun CommentInputBar(
+    reply: DataClassComment?,
+    onCancel: () -> Unit,
+    onSendClick: (String) -> Unit
+){
+    var text by remember { mutableStateOf("") }
+    Column {
+        HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f))
+        if (reply != null){
+            Row (
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFFF2F2F2))
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ){
+                Text("Đang trả lời ${reply.username ?: "User"}", fontSize = 12.sp, color = Color.Gray)
+                Text(
+                    "Hủy",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Red,
+                    modifier = Modifier.clickable { onCancel() }
+                )
+            }
+        }
+        Row (
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color.White)
+                .padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ){
+            TextField(
+                value = text,
+                onValueChange = { text = it },
+                placeholder = { Text(if (reply != null) "Trả lời..." else "Viết bình luận...") },
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(24.dp)),
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color(0xFFF2F2F2),
+                    unfocusedContainerColor = Color(0xFFF2F2F2),
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent
+                ),
+                shape = RoundedCornerShape(24.dp)
+            )
+            IconButton(
+                onClick = {
+                    if (text.isNotBlank()) {
+                        onSendClick(text)
+                        text = ""
+                    }
+                },
+                enabled = text.isNotBlank()
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Filled.Send,
+                    contentDescription = "Send",
+                    tint = if (text.isNotBlank()) Color(0xFF0079D3)
+                            else Color.Gray
+                )
+            }
+        }
+    }
+}
 fun formatIsoDate(isoDate: String): String {
     return try {
-        // Dùng java.util.Locale.getDefault() cho đúng chuẩn
-        val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
-        inputFormat.timeZone = TimeZone.getTimeZone("UTC")
-        val date = inputFormat.parse(isoDate)
-
-        val outputFormat = SimpleDateFormat("HH:mm dd/MM/yyyy", Locale.getDefault())
-        outputFormat.format(date ?: return isoDate)
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
+            val instant = Instant.parse(isoDate)
+            val now = Instant.now()
+            val seconds = ChronoUnit.SECONDS.between(instant, now)
+            val minutes = ChronoUnit.MINUTES.between(instant, now)
+            val hours = ChronoUnit.HOURS.between(instant, now)
+            val days = ChronoUnit.DAYS.between(instant, now)
+            when{
+                seconds < 60 -> "Vừa xong"
+                minutes < 60 -> "$minutes phút trước"
+                hours < 60 -> "$hours giờ trước"
+                days < 7 -> "$days ngày trước"
+                else -> {
+                    val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+                        .withZone(ZoneId.systemDefault())
+                    formatter.format(instant)
+                }
+            }
+        }else{
+            isoDate.take(10)
+        }
     } catch (e: Exception) {
         isoDate
     }

@@ -9,7 +9,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import com.example.appmangxahoi.view.screens.AppHomeScreen
+import com.example.appmangxahoi.view.screens.InboxScreen
 import com.example.appmangxahoi.view.screens.PostDetailScreen
+import androidx.compose.material3.Scaffold
+
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,13 +35,24 @@ class MainActivity : AppCompatActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     // Tạm thời ẩn màn hình chính đi
-                    // AppHomeScreen()
+                     AppHomeScreen()
 
                     // Gọi trực tiếp màn hình chi tiết với ID = 1
-                    PostDetailScreen(
-                        postId = 1,
-                        onBackClick = { /* Không cần làm gì khi test cứng */ }
-                    )
+//                    PostDetailScreen(
+//                        postId = 2,
+//                        onBackClick = { /* Không cần làm gì khi test cứng */ }
+//                    )
+//                    Scaffold(
+//                        modifier = Modifier.fillMaxSize()
+//                    ) { innerPadding -> // <-- Biến innerPadding được sinh ra ở đây
+//
+//                        InboxScreen(
+//                            userId = 6,
+//                            // Lúc này innerPadding mới hợp lệ
+//                            topPadding = innerPadding.calculateTopPadding()
+//                        )
+//                    }
+
                 }
             }
         }

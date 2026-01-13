@@ -74,7 +74,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
 
     // Material Design 3 (Thư viện giao diện chính)
-    implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material3:material3:1.3.0")
 
     // Icon mở rộng
     implementation("androidx.compose.material:material-icons-extended")

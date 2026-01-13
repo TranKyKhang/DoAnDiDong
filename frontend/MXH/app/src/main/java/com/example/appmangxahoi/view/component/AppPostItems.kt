@@ -144,7 +144,11 @@ fun AppPostItem(post: DataClassPost, onItemClick: () -> Unit = {}) {
 
 // --- SỬA LỖI Ở ĐÂY: Thay voteCount bằng upvotes và downvotes ---
 @Composable
-fun VoteActionPill(upvotes: String, downvotes: String) {
+fun VoteActionPill(
+    upvotes: String,
+    downvotes: String,
+
+) {
     val pillShape = RoundedCornerShape(50)
 
     Row(

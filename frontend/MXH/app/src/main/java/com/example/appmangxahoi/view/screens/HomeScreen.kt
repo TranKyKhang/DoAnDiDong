@@ -1,5 +1,6 @@
 package com.example.appmangxahoi.view.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -186,8 +187,23 @@ fun AppHomeScreen() {
 
                 // Màn Inbox
                 composable(Screen.Inbox.route) {
-                    InboxScreen(topPadding = innerPadding.calculateTopPadding())
-                }
+                    InboxScreen(
+                        userId = 6,
+                        topPadding = innerPadding.calculateTopPadding(),
+                        onNotificationClick = { notification ->
+                            val targetId = notification.post_id
+                            if (targetId != null){
+                                if (notification.type == "post"
+                                    || notification.type == "vote"
+                                    || notification.type == "comment"){
+                                    navController.navigate("post_detail/$targetId")
+                                }
+                            }else{
+                                Toast.makeText(context, "Không tìm thấy nội dung", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    )
+            }
 
                 // Màn Profile
                 composable(Screen.Profile.route) { ProfileScreen( context = context, userId = 5) }
@@ -230,7 +246,6 @@ fun AppHomeScreen() {
                     route = "post_detail/{postId}", // Định nghĩa đường dẫn có tham số
                     arguments = listOf(navArgument("postId") { type = NavType.IntType }) // Khai báo kiểu dữ liệu là Int
                 ) { backStackEntry ->
-                    // Lấy ID từ đường dẫn
                     val postId = backStackEntry.arguments?.getInt("postId")
 
                     if (postId != null) {
