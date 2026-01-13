@@ -106,3 +106,69 @@ export const updatePost = async (req, res) => {
     return res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
+export const getFollowedFeed = async (req, res) => {
+    const { userId } = req.body;
+    const limit = parseInt(req.query.limit) || 20;
+    const offset = (parseInt(req.query.page) - 1) * limit || 0;
+
+    try {
+        const { rows } = await pool.query(
+          `SELECT 
+                p.*, 
+                c.name AS community_name,
+                u.username AS author_name,
+                v.type AS user_vote_status
+            FROM posts p
+            INNER JOIN users_communities f ON p.community_id = f.community_id
+            INNER JOIN communities c ON p.community_id = c.id
+            INNER JOIN users u ON p.user_id = u.id
+            LEFT JOIN votes v ON v.post_id = p.id 
+                AND v.target = 'post' 
+                AND v.user_id = ?
+            WHERE f.user_id = ?
+            ORDER BY p.created_at DESC
+            LIMIT ? OFFSET ?;`, 
+          [userId, userId, limit, offset]
+        );
+        
+        res.json({
+            success: true,
+            data: rows
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
+
+export const getPopularPosts = async (req, res) => {
+    const { userId } = req.body;
+
+    try {
+        const { rows } = await pool.query(
+          `SELECT 
+                p.*,
+                c.name AS community_name,
+                u.username AS author_name,
+                v.type AS user_vote_status,
+                ((p.upvotes - p.downvotes) / 
+                POWER(TIMESTAMPDIFF(MINUTE, p.created_at, CURRENT_TIMESTAMP)/3600 + 2, 1.5)) AS hot_score
+            FROM posts p
+            INNER JOIN communities c ON p.community_id = c.id
+            INNER JOIN users u ON p.user_id = u.id
+            LEFT JOIN votes v ON v.post_id = p.id 
+                AND v.target = 'post' 
+                AND v.user_id = 6
+            ORDER BY hot_score DESC
+            LIMIT 20;`, 
+          [userId]
+        );
+
+        res.json({
+            success: true,
+            data: rows
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
