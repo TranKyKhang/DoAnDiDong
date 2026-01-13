@@ -4,8 +4,6 @@ import fs from "fs";
 import { removeFile } from "../utils/file.js";
 
 export const getPostDetail = async (req, res) => {
-  console.log("🔥 GET POST DETAIL HIT 🔥");
-
   try {
     const postId = req.params.id;
 
@@ -59,7 +57,6 @@ export const getPostDetail = async (req, res) => {
     });
 
   } catch (err) {
-    console.error("❌ GET POST DETAIL ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -68,23 +65,36 @@ export const getPostDetail = async (req, res) => {
 export const updatePost = async (req, res) => {
   try {
     const { postId } = req.params;
-    const userId = 5; 
+    const userId = req.user.id; 
     const { content, link_url } = req.body;
 
     const images = req.files?.images || [];
     const videoFile = req.files?.video?.[0];
 
-    
-    const [existing] = await db.query("SELECT * FROM POSTS WHERE id = ?", [postId]);
+
+    const [existing] = await db.execute(
+      "SELECT * FROM POSTS WHERE id = ?",
+      [postId]
+    );
+
     if (existing.length === 0) {
-      return res.status(404).json({ success: false, message: "không tìm thấy bài viết" });
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy bài viết"
+      });
     }
+
     const post = existing[0];
 
+   
     if (post.user_id !== userId) {
-      return res.status(403).json({ success: false, message: "bạn không thể chỉnh sửa bài viết này" });
+      return res.status(403).json({
+        success: false,
+        message: "Bạn không thể chỉnh sửa bài viết này"
+      });
     }
 
+   
     const fields = [];
     const values = [];
 
@@ -98,9 +108,10 @@ export const updatePost = async (req, res) => {
       values.push(link_url);
     }
 
-    
     if (videoFile) {
-      if (post.video) await removeFile(post.video); 
+      if (post.video) {
+        await removeFile(post.video); 
+      }
 
       const videoPath = `/upload/posts/videos/${videoFile.filename}`;
       fields.push("video = ?");
@@ -108,29 +119,54 @@ export const updatePost = async (req, res) => {
     }
 
     if (fields.length > 0) {
-      const sql = `UPDATE POSTS SET ${fields.join(", ")} WHERE id = ?`;
+      const sql = `
+        UPDATE POSTS
+        SET ${fields.join(", ")}
+        WHERE id = ?
+      `;
       values.push(postId);
-      await db.query(sql, values);
+      await db.execute(sql, values);
     }
 
-  
+ 
     if (images.length > 0) {
-      const [oldImages] = await db.query("SELECT image FROM POST_IMAGES WHERE post_id = ?", [postId]);
+      const [oldImages] = await db.execute(
+        "SELECT image FROM POST_IMAGES WHERE post_id = ?",
+        [postId]
+      );
+
       for (const img of oldImages) {
-        if (img.image) await removeFile(img.image); 
+        if (img.image) {
+          await removeFile(img.image);
+        }
       }
 
-      
-      await db.query("DELETE FROM POST_IMAGES WHERE post_id = ?", [postId]);
+      await db.execute(
+        "DELETE FROM POST_IMAGES WHERE post_id = ?",
+        [postId]
+      );
 
-    
-      const imgValues = images.map(file => [postId, `/upload/posts/images/${file.filename}`]);
-      await db.query("INSERT INTO POST_IMAGES (post_id, image) VALUES ?", [imgValues]);
+      const imgValues = images.map(file => [
+        postId,
+        `/upload/posts/images/${file.filename}`
+      ]);
+
+      await db.query(
+        "INSERT INTO POST_IMAGES (post_id, image) VALUES ?",
+        [imgValues]
+      );
     }
 
-    return res.json({ success: true, message: "cập nhật bìa viết thành công" });
+    return res.json({
+      success: true,
+      message: "Cập nhật bài viết thành công"
+    });
+
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({ success: false, message: "Server error" });
+    console.error("UPDATE POST ERROR:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
   }
 };

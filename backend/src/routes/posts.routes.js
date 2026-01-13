@@ -7,7 +7,7 @@ import { verifyToken } from '../middlewares/auth.middleware.js';
 const router = express.Router();
 
 router.put(
-  "/:postId",
+  "/:postId",verifyToken,
   upload.fields([
     { name: "images", maxCount: 20 },
     { name: "video", maxCount: 1 }
