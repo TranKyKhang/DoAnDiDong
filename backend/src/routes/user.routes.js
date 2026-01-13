@@ -18,18 +18,8 @@ import {
 
 const router = express.Router();
 
-// User update
-router.put(
-  "/update-profile",
-  uploadAvatar.fields([
-    { name: "avatar", maxCount: 1 },
-    { name: "banner", maxCount: 1 }
-  ]),
-  updateProfile
-);
-
 router.get("/", getAllUsers);
-router.get("/:id", getUserById);
+
 
 // Auth routes
 router.post('/register', register);

@@ -85,6 +85,8 @@ export const updateProfile = async (req, res) => {
 
 
 export const getUserById = async (req, res) => {
+  console.log("❌ GET USER BY ID HIT, id =", req.params.id);
+
   try {
     const { id } = req.params;
 
@@ -118,20 +120,28 @@ export const getUserById = async (req, res) => {
 };
 
 export const getProfile = async (req, res) => {
+  console.log("🔥 GET PROFILE HIT 🔥");
   try {
-    const [rows] = await pool.execute(
-      'SELECT id, email, username, display_name, bio, avatar, banner, post_rating, comment_rating, created_at FROM users WHERE id = ?',
+    console.log("JWT user:", req.user.id);
+
+    const [rows] = await db.execute(
+      "SELECT id, email, username, display_name, banner, avatar FROM users WHERE id = ?",
       [req.user.id]
     );
+
+    console.log("DB rows:", rows);
+
     if (rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' });
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
     }
-    const user = rows[0];
-    user.created_at = user.created_at.toISOString();
-    res.json(user);
+
+    res.json(rows[0]);
   } catch (error) {
-    console.error('Get profile error:', error);
-    res.status(500).json({ success: false, message: 'Lỗi server' });
+    console.error("GET PROFILE ERROR:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
