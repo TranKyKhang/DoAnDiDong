@@ -84,43 +84,8 @@ export const updateProfile = async (req, res) => {
 
 
 
-export const getUserById = async (req, res) => {
-  console.log("❌ GET USER BY ID HIT, id =", req.params.id);
-
-  try {
-    const { id } = req.params;
-
-    const [rows] = await db.query(
-      `
-      SELECT 
-        display_name,
-        bio,
-        avatar,
-        banner
-      FROM USERS
-      WHERE id = ?
-      `,
-      [id]
-    );
-
-    if (rows.length === 0) {
-      return res.status(404).json({
-        message: "User not found"
-      });
-    }
-
-    res.json(rows[0]);
-
-  } catch (err) {
-    console.error("MYSQL ERROR:", err);
-    res.status(500).json({
-      message: err.message
-    });
-  }
-};
-
 export const getProfile = async (req, res) => {
-  console.log("🔥 GET PROFILE HIT 🔥");
+ 
   try {
     console.log("JWT user:", req.user.id);
 
