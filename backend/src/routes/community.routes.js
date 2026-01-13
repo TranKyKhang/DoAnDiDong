@@ -11,6 +11,7 @@ import {leaveCommunity} from '../controllers/community.controller.js';
 import {getCommunityDetails} from '../controllers/community.controller.js';
 import {getPostCommunityByID} from '../controllers/community.controller.js';
 import upload from '../middlewares/uploadMedia.middleware.js';
+import { verifyToken } from '../middlewares/auth.middleware.js';
 const router = express.Router();
 
 router.put("/ban/:communityId",banUser)
@@ -36,5 +37,6 @@ router.post('/leave', leaveCommunity);
 //Lay thong tin cong dong
 router.get('/details/:id',getCommunityDetails);
 router.get('/posts/:community_id',getPostCommunityByID);
-
+router.put("/:communityId/ban", verifyToken, banUser);
+router.put("/:communityId/unBan", verifyToken, unBanUser);
 export default router;

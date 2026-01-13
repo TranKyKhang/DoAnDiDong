@@ -17,10 +17,6 @@ import {
 
 const router = express.Router();
 
-router.get("/", getAllUsers);
-
-
-// Auth routes
 router.post('/register', register);
 router.post('/login', login);
 router.post('/forgot-password', forgotPassword);
@@ -37,5 +33,5 @@ router.put('/profile-update', verifyToken, uploadAvatar.fields([
 router.post('/change-password', verifyToken, changePassword);
 router.get("/users", verifyToken, getAllUsers);
 
-// Export ES Module
+
 export default router;
