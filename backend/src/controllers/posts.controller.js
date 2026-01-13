@@ -3,39 +3,67 @@ import path from "path";
 import fs from "fs";
 import { removeFile } from "../utils/file.js";
 
-export const getPostDetail = (req, res) => {
+export const getPostDetail = async (req, res) => {
+  console.log("🔥 GET POST DETAIL HIT 🔥");
+
+  try {
     const postId = req.params.id;
 
-    const sql = `
-        SELECT p.*, u.username as author_name, c.name as community_name 
-        FROM posts p 
-        JOIN users u ON p.id = u.id 
-        JOIN communities c ON p.id = c.id 
-        WHERE p.id = ?`;
+    const [rows] = await db.execute(`
+      SELECT
+        p.id,
+        p.title,
+        p.content,
+        p.video,
+        p.link_url,
+        p.created_at,
+        p.upvotes,
+        p.downvotes,
+        p.rating,
+        p.comment_count,
+        p.is_removed,
 
-    db.query(sql, [postId], (err, result) => {
-        if (err) return res.status(500).json({ success: false, error: err.message });
-        if (result.length === 0) return res.status(404).json({ success: false, message: "Không tìm thấy bài viết" });
+        u.id AS author_id,
+        u.username AS author_name,
+        u.display_name AS author_display_name,
+        u.avatar AS author_avatar,
 
-        const postData = result[0];
+        c.id AS community_id,
+        c.name AS community_name,
+        c.icon AS community_icon
+      FROM POSTS p
+      JOIN USERS u ON p.user_id = u.id
+      LEFT JOIN COMMUNITIES c ON p.community_id = c.id
+      WHERE p.id = ?
+        AND p.is_removed = false
+    `, [postId]);
 
-        const imageSql = `SELECT id as id, image FROM post_images WHERE post_id = ?`;
+    console.log("📦 POST ROWS:", rows);
 
-        db.query(imageSql, [postId], (err, imageResults) => {
-            if (err) return res.status(500).json({ success: false, error: err.message });
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "Post not found" });
+    }
 
-            const imagesArray = imageResults ? imageResults : [];
+    const [images] = await db.execute(`
+      SELECT id, image
+      FROM POST_IMAGES
+      WHERE post_id = ?
+    `, [postId]);
 
-            res.json({
-                success: true,
-                data: {
-                    ...postData,
-                    images: imagesArray
-                }
-            });
-        });
+    res.json({
+      success: true,
+      data: {
+        ...rows[0],
+        images
+      }
     });
+
+  } catch (err) {
+    console.error("❌ GET POST DETAIL ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
 };
+
 
 export const updatePost = async (req, res) => {
   try {

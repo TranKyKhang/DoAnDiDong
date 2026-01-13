@@ -10,7 +10,6 @@ import {
 } from '../controllers/auth.Controller.js';
 import {
   getAllUsers,
-  getUserById,
   getProfile,
   updateProfile,
   changePassword
@@ -28,7 +27,7 @@ router.post('/forgot-password', forgotPassword);
 router.post('/verify-reset-otp', verifyResetOtp);
 router.post('/google-login', googleLogin);
 
-// Profile routes (cần token)
+
 router.get('/profile', verifyToken, getProfile);
 router.put('/profile-update', verifyToken, uploadAvatar.fields([
     { name: "avatar", maxCount: 1 },

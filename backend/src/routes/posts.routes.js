@@ -2,7 +2,7 @@ import express from "express";
 import upload from "../middlewares/uploadMedia.middleware.js";
 import  {updatePost} from "../controllers/posts.controller.js";
 import  {getPostDetail} from "../controllers/posts.controller.js";
-
+import { verifyToken } from '../middlewares/auth.middleware.js';
 
 const router = express.Router();
 
@@ -14,6 +14,7 @@ router.put(
   ]),
   updatePost
 );
-router.get("/:id", getPostDetail);
+
+router.get("/:id", verifyToken, getPostDetail);
 
 export default router; 

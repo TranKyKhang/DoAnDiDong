@@ -85,7 +85,6 @@ export const updateProfile = async (req, res) => {
 
 
 export const getProfile = async (req, res) => {
- 
   try {
     console.log("JWT user:", req.user.id);
 
