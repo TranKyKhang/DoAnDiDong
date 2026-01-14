@@ -17,6 +17,7 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
 
@@ -35,7 +36,6 @@ class CommunityController {
     data class CommunityApiResponse(
         val data: List<CommunityModel>
     )
-
     suspend fun getCommunitiesByUser(userId: Int): List<CommunityModel> =
         withContext(Dispatchers.IO) {
             try {
@@ -67,7 +67,7 @@ class CommunityController {
                 emptyList()
             }
         }
-    // HÀM MỚI: Tạo cộng đồng
+    // Tạo cộng đồng
     suspend fun createCommunity(context: Context, data: CreateCommunityData): Boolean =
         withContext(Dispatchers.IO) {
             try {
@@ -137,5 +137,102 @@ class CommunityController {
             null
         }
     }
+
+    suspend fun checkIsJoined(userId: Int, communityId: Int): Boolean =
+        withContext(Dispatchers.IO) {
+            try {
+                val jsonObject = JSONObject()
+                jsonObject.put("user_id", userId)
+                jsonObject.put("community_id", communityId)
+
+                val mediaType = "application/json; charset=utf-8".toMediaTypeOrNull()
+                val requestBody = jsonObject.toString().toRequestBody(mediaType)
+
+                val request = Request.Builder()
+                    .url("$BASE_URL/api/communities/check_status") // Gọi API check
+                    .post(requestBody)
+                    .build()
+
+                client.newCall(request).execute().use { response ->
+                    if (response.isSuccessful) {
+                        val body = response.body?.string()
+                        if (body != null) {
+                            val jsonResponse = JSONObject(body)
+                            // Server trả về { "isJoined": true/false }
+                            return@withContext jsonResponse.optBoolean("isJoined", false)
+                        }
+                    }
+                    return@withContext false
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                return@withContext false
+            }
+        }
+    suspend fun joinCommunity(userId: Int, communityId: Int): Boolean =
+        withContext(Dispatchers.IO) {
+            try {
+                val jsonObject = JSONObject()
+                jsonObject.put("user_id", userId)
+                jsonObject.put("community_id", communityId)
+
+                val mediaType = "application/json; charset=utf-8".toMediaTypeOrNull()
+                val requestBody = jsonObject.toString().toRequestBody(mediaType)
+
+
+                val request = Request.Builder()
+                    .url("$BASE_URL/api/communities/join")
+                    .post(requestBody)
+                    .build()
+
+                client.newCall(request).execute().use { response ->
+                    if (response.isSuccessful) {
+                        Log.d("API_JOIN", "Tham gia thành công!")
+                        return@withContext true
+                    } else {
+                        val errorBody = response.body?.string()
+                        Log.e("API_JOIN", "Thất bại: Code ${response.code} - $errorBody")
+                        return@withContext false
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("API_JOIN", "Lỗi Exception: ${e.message}")
+                e.printStackTrace()
+                return@withContext false
+            }
+        }
+
+    suspend fun leaveCommunity(userId: Int, communityId: Int): Boolean =
+        withContext(Dispatchers.IO) {
+            try {
+                val jsonObject = JSONObject()
+                jsonObject.put("user_id", userId)
+                jsonObject.put("community_id", communityId)
+
+                val mediaType = "application/json; charset=utf-8".toMediaTypeOrNull()
+                val requestBody = jsonObject.toString().toRequestBody(mediaType)
+
+
+                val request = Request.Builder()
+                    .url("$BASE_URL/api/communities/leave")
+                    .post(requestBody)
+                    .build()
+
+                client.newCall(request).execute().use { response ->
+                    if (response.isSuccessful) {
+                        Log.d("API_LEAVE", "Rời thành công!")
+                        return@withContext true
+                    } else {
+                        val errorBody = response.body?.string()
+                        Log.e("API_LEAVE", "Thất bại: Code ${response.code} - $errorBody")
+                        return@withContext false
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("API_LEAVE", "Lỗi Exception: ${e.message}")
+                e.printStackTrace()
+                return@withContext false
+            }
+        }
 
 }

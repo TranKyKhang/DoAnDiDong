@@ -15,3 +15,9 @@ data class CommunityModel(
     val created_at: String,
     val user_id:Int
 )
+
+@Serializable
+data class JoinRequest(
+    val user_id: Int,
+    val community_id: Int
+)

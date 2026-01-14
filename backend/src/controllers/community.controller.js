@@ -318,6 +318,24 @@ export const getCommunitiesByUser = async (req, res) => {
         return res.status(500).json({ message: "Lỗi Server", error: error.message });
     }
 };
+// API Kiểm tra trạng thái tham gia
+export const checkJoinStatus = async (req, res) => {
+  const { user_id, community_id } = req.body;
+  try {
+    const query = "SELECT * FROM users_communities WHERE user_id = ? AND community_id = ?";
+    const [rows] = await db.query(query, [user_id, community_id]);
+    
+    // Nếu tìm thấy dòng dữ liệu -> Đã tham gia (isJoined: true)
+    if (rows.length > 0) {
+      return res.status(200).json({ isJoined: true });
+    } else {
+      return res.status(200).json({ isJoined: false });
+    }
+  } catch (error) {
+    console.error("Lỗi check status:", error);
+    return res.status(500).json({ message: "Lỗi Server" });
+  }
+};
 // Tham gia cong dong
 export const joinCommunity=async(req,res)=>{
   //Lay user tam thoi 
@@ -338,8 +356,11 @@ export const joinCommunity=async(req,res)=>{
       return res.status(409).json({ message: "Bạn đã tham gia cộng đồng này rồi!" });
     }
     await db.query(insertQuery, [user_id, community_id]);
+
+    const updateCountQuery = "UPDATE communities SET member_count = member_count + 1 WHERE id = ?";
+    await db.query(updateCountQuery, [community_id]);
+
     return res.status(200).json({ message: "Tham gia thành công!" });
-    
   }catch(error){
     console.error("Lỗi join community: ", error);
     return res.status(500).json({ message: "Lỗi Server", error: error.message });
@@ -362,6 +383,10 @@ export const leaveCommunity = async (req, res) => {
       if (result.affectedRows === 0) {
         return res.status(404).json({ message: "Bạn chưa tham gia cộng đồng này nên không thể rời!" });
       }
+
+      const updateCountQuery = "UPDATE communities SET member_count = member_count - 1 WHERE id = ?";
+      await db.query(updateCountQuery, [community_id]);
+
       return res.status(200).json({ message: "Đã rời cộng đồng thành công." });
 
     }catch (error) {

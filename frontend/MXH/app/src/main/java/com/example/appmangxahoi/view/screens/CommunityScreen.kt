@@ -1,5 +1,6 @@
 package com.example.appmangxahoi.view.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,12 +25,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.appmangxahoi.controller.CommunityController
 import com.example.appmangxahoi.model.mockPosts
 import com.example.appmangxahoi.view.component.AppPostItem
+import kotlinx.coroutines.launch
 
 // Model đơn giản cho thành viên (Dùng nội bộ trong file này)
 data class Member(val name: String, val role: String, val avatarUrl: String)
@@ -43,6 +47,7 @@ fun CommunityScreen(
 ) {
     val displayName = remember(communityName) { communityName.replace("_", "/") }
     var isJoined by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(true) } // Biến để tránh nút nhảy lung tung khi chưa load xong
     var isNotified by remember { mutableStateOf(false) }
 
     // --- 1. STATE CHO BOTTOM SHEET THÀNH VIÊN ---
@@ -65,6 +70,20 @@ fun CommunityScreen(
 
     val communityPosts = remember(displayName) {
         mockPosts.filter { it.subreddit == displayName }.ifEmpty { mockPosts }
+    }
+
+    val scope = rememberCoroutineScope()
+    val controller = remember { CommunityController() }
+    val context = LocalContext.current
+    val currentUserId = 6
+    val currentCommunityId = 19
+
+    // --- 1. KIỂM TRA TRẠNG THÁI KHI VỪA MỞ MÀN HÌNH ---
+    LaunchedEffect(Unit) {
+        // Gọi API check xem user 6 đã join community 19 chưa
+        val status = controller.checkIsJoined(currentUserId, currentCommunityId)
+        isJoined = status
+        isLoading = false
     }
 
     Scaffold(
@@ -153,17 +172,43 @@ fun CommunityScreen(
                                     }
                                 }
                                 Button(
-                                    onClick = { isJoined = !isJoined },
+                                    onClick = {
+                                        // Nếu đã Join -> Gọi Leave, Ngược lại -> Gọi Join
+                                        scope.launch {
+                                            if (isJoined) {
+                                                // --- RỜI NHÓM ---
+                                                val success = controller.leaveCommunity(currentUserId, currentCommunityId)
+                                                if (success) {
+                                                    isJoined = false // Cập nhật UI thành "Tham gia"
+                                                    Toast.makeText(context, "Đã rời nhóm", Toast.LENGTH_SHORT).show()
+                                                } else {
+                                                    Toast.makeText(context, "Lỗi khi rời nhóm", Toast.LENGTH_SHORT).show()
+                                                }
+                                            } else {
+                                                // --- THAM GIA ---
+                                                val success = controller.joinCommunity(currentUserId, currentCommunityId)
+                                                if (success) {
+                                                    isJoined = true // Cập nhật UI thành "Đã tham gia"
+                                                    Toast.makeText(context, "Tham gia thành công!", Toast.LENGTH_SHORT).show()
+                                                } else {
+                                                    Toast.makeText(context, "Lỗi khi tham gia", Toast.LENGTH_SHORT).show()
+                                                }
+                                            }
+                                        }
+                                    },
+                                    // Đổi màu nút dựa trên trạng thái
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (isJoined) Color.LightGray.copy(alpha = 0.5f) else Color(0xFF0079D3),
+                                        containerColor = if (isJoined) Color.Gray.copy(alpha = 0.2f) else Color(0xFF0079D3),
                                         contentColor = if (isJoined) Color.Black else Color.White
                                     ),
                                     shape = RoundedCornerShape(50),
                                     contentPadding = PaddingValues(horizontal = 20.dp),
-                                    modifier = Modifier.height(36.dp)
+                                    modifier = Modifier.height(36.dp),
+                                    // Disable nút khi đang load ban đầu để tránh lỗi
+                                    enabled = !isLoading
                                 ) {
                                     Text(
-                                        text = if (isJoined) "Đã tham gia" else "Tham gia",
+                                        text = if (isLoading) "..." else if (isJoined) "Đã tham gia" else "Tham gia",
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 14.sp
                                     )
@@ -193,7 +238,7 @@ fun CommunityScreen(
                             color = Color.DarkGray
                         )
 
-                        // --- 3. NÚT XEM THÀNH VIÊN (MỚI THÊM) ---
+                        // --- NÚT XEM THÀNH VIÊN  ---
                         Spacer(modifier = Modifier.height(16.dp))
                         HorizontalDivider(thickness = 0.5.dp, color = Color.LightGray)
                         Row(
@@ -224,7 +269,7 @@ fun CommunityScreen(
         }
     }
 
-    // --- 4. GIAO DIỆN BOTTOM SHEET THÀNH VIÊN ---
+    // --- GIAO DIỆN BOTTOM SHEET THÀNH VIÊN ---
     if (showMemberSheet) {
         ModalBottomSheet(
             onDismissRequest = { showMemberSheet = false },

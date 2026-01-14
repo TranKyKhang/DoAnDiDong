@@ -13,6 +13,7 @@ import {joinCommunity} from '../controllers/community.controller.js';
 import {leaveCommunity} from '../controllers/community.controller.js';
 import {getCommunityDetails} from '../controllers/community.controller.js';
 import {getPostCommunityByID} from '../controllers/community.controller.js';
+import {checkJoinStatus} from '../controllers/community.controller.js';
 const router = express.Router();
 
 router.put("/ban/:communityId",banUser)
@@ -58,6 +59,9 @@ router.post('/join', joinCommunity);
 router.post('/leave', leaveCommunity);
 //Lay thong tin cong dong
 router.get('/details/:id',getCommunityDetails);
+//Lay danh sach bai viet theo tung cong dong
 router.get('/posts/:community_id',getPostCommunityByID);
+//Kiem tra trang thai dang nhap
+router.post("/check_status", checkJoinStatus);
 
 export default router;
