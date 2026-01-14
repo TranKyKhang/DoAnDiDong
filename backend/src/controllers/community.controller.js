@@ -122,18 +122,18 @@ export const unBanUser = async (req, res) => {
 
 
 export const changeRole = async (req, res) => {
-    try {
+  try {
     const { communityId } = req.params;
-    const { currentUserId, targetUserId, role } = req.body;
+    const { targetUserId, role } = req.body;
+    const currentUserId = req.user.id; // 🔥 từ JWT
 
-    if (!currentUserId || !targetUserId || !role) {
+    if (!targetUserId || !role) {
       return res.status(400).json({
         success: false,
         message: "Thiếu dữ liệu"
       });
     }
 
-    
     if (role === "admin") {
       return res.status(403).json({
         success: false,
@@ -148,7 +148,7 @@ export const changeRole = async (req, res) => {
       });
     }
 
-   
+    // kiểm tra quyền người thực hiện
     const [actorRows] = await db.query(
       `SELECT role FROM users_communities
        WHERE community_id = ? AND user_id = ?`,
@@ -169,7 +169,7 @@ export const changeRole = async (req, res) => {
       });
     }
 
-    
+    // kiểm tra user bị đổi role
     const [targetRows] = await db.query(
       `SELECT role FROM users_communities
        WHERE community_id = ? AND user_id = ?`,
@@ -186,7 +186,7 @@ export const changeRole = async (req, res) => {
     const actorRole = actorRows[0].role;
     const targetRole = targetRows[0].role;
 
-    
+    // moderator chỉ được nâng member → moderator
     if (
       actorRole === "moderator" &&
       !(targetRole === "member" && role === "moderator")
@@ -197,7 +197,6 @@ export const changeRole = async (req, res) => {
       });
     }
 
-   
     await db.query(
       `UPDATE users_communities
        SET role = ?
@@ -209,7 +208,6 @@ export const changeRole = async (req, res) => {
       success: true,
       message: `Đã cập nhật role thành ${role}`
     });
-
   } catch (err) {
     console.error("MYSQL ERROR:", err);
     res.status(500).json({
@@ -218,6 +216,7 @@ export const changeRole = async (req, res) => {
     });
   }
 };
+
 
 
 
