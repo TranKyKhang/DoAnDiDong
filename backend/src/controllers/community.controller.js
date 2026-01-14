@@ -125,7 +125,7 @@ export const changeRole = async (req, res) => {
   try {
     const { communityId } = req.params;
     const { targetUserId, role } = req.body;
-    const currentUserId = req.user.id; // 🔥 từ JWT
+    const currentUserId = req.user.id; 
 
     if (!targetUserId || !role) {
       return res.status(400).json({
@@ -148,7 +148,7 @@ export const changeRole = async (req, res) => {
       });
     }
 
-    // kiểm tra quyền người thực hiện
+
     const [actorRows] = await db.query(
       `SELECT role FROM users_communities
        WHERE community_id = ? AND user_id = ?`,
@@ -169,7 +169,7 @@ export const changeRole = async (req, res) => {
       });
     }
 
-    // kiểm tra user bị đổi role
+
     const [targetRows] = await db.query(
       `SELECT role FROM users_communities
        WHERE community_id = ? AND user_id = ?`,
@@ -186,7 +186,6 @@ export const changeRole = async (req, res) => {
     const actorRole = actorRows[0].role;
     const targetRole = targetRows[0].role;
 
-    // moderator chỉ được nâng member → moderator
     if (
       actorRole === "moderator" &&
       !(targetRole === "member" && role === "moderator")
