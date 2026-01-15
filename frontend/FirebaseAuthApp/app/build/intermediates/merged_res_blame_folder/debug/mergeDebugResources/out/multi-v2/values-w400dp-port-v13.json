@@ -4,7 +4,7 @@
             "outputFile": "com.example.firebaseauthapp-mergeDebugResources-47:/values-w400dp-port-v13/values-w400dp-port-v13.xml",
             "map": [
                 {
-                    "source": "/Users/nguyenhokhacduy/.gradle/caches/8.13/transforms/e240a6277e75fbb3e40a58dff1e042fd/transformed/material-1.12.0/res/values-w400dp-port-v13/values-w400dp-port-v13.xml",
+                    "source": "C:\\Users\\ADMIN\\.gradle\\caches\\8.13\\transforms\\e240a6277e75fbb3e40a58dff1e042fd\\transformed\\material-1.12.0\\res\\values-w400dp-port-v13\\values-w400dp-port-v13.xml",
                     "from": {
                         "startLines": "2,3,4,5,6,7,8,9",
                         "startColumns": "4,4,4,4,4,4,4,4",
