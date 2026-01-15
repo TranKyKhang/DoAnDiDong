@@ -24,7 +24,7 @@ app.get("/", (req, res) => {
   });
 });
 app.use('/auth', googleRoutes);
-app.use('/auth', userRoutes);
+
 app.use("/upload", express.static("upload"));
 app.use("/api/users", userRoutes);
 app.use("/api/communities", communityRoutes);

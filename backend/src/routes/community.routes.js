@@ -9,13 +9,11 @@ import {getCommunitiesByUser} from '../controllers/community.controller.js';
 import {joinCommunity} from '../controllers/community.controller.js';
 import {leaveCommunity} from '../controllers/community.controller.js';
 import {getCommunityDetails} from '../controllers/community.controller.js';
-import {getPostCommunityByID} from '../controllers/community.controller.js';
+import {getPostCommunityByID, searchCommunities} from '../controllers/community.controller.js';
 import upload from '../middlewares/uploadMedia.middleware.js';
+import { verifyToken } from '../middlewares/auth.middleware.js';
 const router = express.Router();
 
-router.put("/ban/:communityId",banUser)
-router.put("/unban/:communityId",unBanUser)
-router.put("/changerole/:communityId",changeRole)
 router.get("/", getAllCommunity);
 //Huy (Communities)
 // Định nghĩa API POST /api/communities/create
@@ -28,13 +26,20 @@ router.post(
     ,createCommunities
 );
 //Lay danh sach communities theo users
-router.get('/user/:userId', getCommunitiesByUser);
+router.get('/user',verifyToken, getCommunitiesByUser);
 // API Tham gia: POST /api/communities/join
-router.post('/join', joinCommunity);
+router.post('/join',verifyToken, joinCommunity);
 // API Rời: POST /api/communities/leave
-router.post('/leave', leaveCommunity);
+router.post('/leave',verifyToken, leaveCommunity);
 //Lay thong tin cong dong
-router.get('/details/:id',getCommunityDetails);
-router.get('/posts/:community_id',getPostCommunityByID);
-
+router.get('/details/:id',verifyToken,getCommunityDetails);
+router.get('/posts/:community_id',verifyToken,getPostCommunityByID);
+router.put("/:communityId/ban", verifyToken, banUser);
+router.put("/:communityId/unBan", verifyToken, unBanUser);
+router.put(
+  "/:communityId/change-role",
+  verifyToken,
+  changeRole
+);
+router.get("/search", verifyToken, searchCommunities);
 export default router;
