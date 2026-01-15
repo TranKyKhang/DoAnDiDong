@@ -22,8 +22,6 @@ app.get("/", (req, res) => {
     message: "running oke"
   });
 });
-app.use('/auth', googleRoutes);
-app.use('/auth', userRoutes);
 app.use("/upload", express.static("upload"));
 app.use("/api/users", userRoutes);
 app.use("/api/communities", communityRoutes);
@@ -31,5 +29,8 @@ app.use("/api/posts", postRoutes);
 app.use("/api/votes", voteRoutes);
 app.use("/api/comments", commentRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/auth', require('./routes/authRoutes'));
+app.use('/profile', require('./routes/profileRoutes'));
+app.use('/auth', require('./routes/passwordRoutes'));
 
 export default app; 

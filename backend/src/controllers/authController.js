@@ -1,31 +1,31 @@
-// src/controllers/auth.controller.js
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import crypto from 'crypto';
-import redis from 'redis';
-import { sendResetOTPEmail } from '../utils/email.js';
-import generateDiscriminator from '../utils/generateDiscriminator.js';
-import pool from '../config/db.js';
-import { JWT_SECRET } from '../middlewares/auth.middleware.js';
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const { JWT_SECRET } = require('../middlewares/authMiddleware');
+const pool = require('../config/db');
 
-const redisClient = redis.createClient({
-  url: process.env.REDIS_URL || 'redis://localhost:6379'
-});
-redisClient.on('error', err => console.error('Redis Client Error', err));
+// Hàm tạo 4 số sau dấu # của username profile
+const generateDiscriminator = async (baseUsername) => {
+  for (let i = 0; i < 120; i++) {
+    const disc = String(1000 + Math.floor(Math.random() * 9000));
+    const fullUsername = `${baseUsername}#${disc}`;
+    const [check] = await pool.execute(
+      'SELECT 1 FROM users WHERE username = ?',
+      [fullUsername]
+    );
+    if (check.length === 0) return disc;
+  }
+  throw new Error('Không thể tạo username unique sau nhiều lần thử');
+};
 
-(async () => {
-  await redisClient.connect();
-  console.log('Redis connected');
-})();
-
-// Đăng ký
-export const register = async (req, res) => {
+//Đăng ký
+const register = async (req, res) => {
   const { email, username, password } = req.body;
   if (!email || !username || !password) {
     return res.status(400).json({ success: false, message: 'Thiếu thông tin bắt buộc' });
   }
 
   try {
+    // Kiểm tra email hoặc username đã tồn tại
     const [existing] = await pool.execute(
       'SELECT id FROM users WHERE email = ? OR username LIKE ?',
       [email, `${username}#%`]
@@ -61,8 +61,8 @@ export const register = async (req, res) => {
   }
 };
 
-// Đăng nhập
-export const login = async (req, res) => {
+//Đăng nhập
+const login = async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
     return res.status(400).json({ success: false, message: 'Thiếu thông tin' });
@@ -102,60 +102,4 @@ export const login = async (req, res) => {
   }
 };
 
-// Quên mật khẩu - gửi OTP
-export const forgotPassword = async (req, res) => {
-  const { email } = req.body;
-  if (!email) return res.status(400).json({ success: false, message: 'Thiếu email' });
-
-  try {
-    const [rows] = await pool.execute('SELECT id FROM users WHERE email = ?', [email]);
-    if (rows.length === 0) {
-      return res.json({ success: true, message: 'Nếu email hợp lệ, bạn sẽ nhận OTP' });
-    }
-
-    const otp = crypto.randomInt(100000, 999999).toString();
-    const key = `otp:${email}`;
-    await redisClient.set(key, otp, { EX: 600 });
-
-    await sendResetOTPEmail(email, otp);
-
-    res.json({ success: true, message: 'Đã gửi mã OTP đến email của bạn' });
-  } catch (error) {
-    console.error('Forgot password error:', error);
-    res.status(500).json({ success: false, message: 'Lỗi gửi OTP' });
-  }
-};
-
-// Xác thực OTP và reset password
-export const verifyResetOtp = async (req, res) => {
-  const { email, otp, newPassword } = req.body;
-  if (!email || !otp || !newPassword) {
-    return res.status(400).json({ success: false, message: 'Thiếu thông tin' });
-  }
-  if (otp.length !== 6 || !/^\d{6}$/.test(otp)) {
-    return res.status(400).json({ success: false, message: 'Mã OTP phải là 6 chữ số' });
-  }
-
-  try {
-    const key = `otp:${email}`;
-    const storedOtp = await redisClient.get(key);
-    if (!storedOtp || storedOtp !== otp) {
-      return res.status(400).json({ success: false, message: 'Mã OTP không hợp lệ hoặc đã hết hạn' });
-    }
-
-    const [rows] = await pool.execute('SELECT id FROM users WHERE email = ?', [email]);
-    if (rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' });
-    }
-
-    const hashed = await bcrypt.hash(newPassword, 10);
-    await pool.execute('UPDATE users SET password = ? WHERE id = ?', [hashed, rows[0].id]);
-
-    await redisClient.del(key);
-
-    res.json({ success: true, message: 'Đặt lại mật khẩu thành công. Hãy đăng nhập lại.' });
-  } catch (error) {
-    console.error('Reset password error:', error);
-    res.status(500).json({ success: false, message: 'Lỗi server' });
-  }
-};
+module.exports = { register, login };
