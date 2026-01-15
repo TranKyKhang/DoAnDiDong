@@ -223,8 +223,8 @@ export const changeRole = async (req, res) => {
 // Tao cong dong
 export const createCommunities = async (req, res) => {
     // Lay du lieu tu client
-    const { name, description, user_id } = req.body;
-
+    const { name, description } = req.body;
+    const user_id=req.user.id;
     if (!name || !user_id) {
         return res.status(400).json({ message: "Tên cộng đồng và ID người tạo là bắt buộc!" });
     }
@@ -267,7 +267,7 @@ export const createCommunities = async (req, res) => {
 
 // Hàm lấy danh sách cộng đồng mà user đã tham gia
 export const getCommunitiesByUser = async (req, res) => {
-    const userId = req.params.userId;
+    const userId = req.user.id;
 
     if (!userId) {
         return res.status(400).json({ message: "Thiếu User ID" });
@@ -296,7 +296,8 @@ export const getCommunitiesByUser = async (req, res) => {
 // Tham gia cong dong
 export const joinCommunity=async(req,res)=>{
   //Lay user tam thoi 
-  const {user_id,community_id}=req.body
+  const {community_id}=req.body;
+  const user_id=req.user.id;
   if(!user_id||!community_id){
     return res.status(400).json({message:"Thiếu user_id hoặc community_id !"});
   }
@@ -323,8 +324,8 @@ export const joinCommunity=async(req,res)=>{
 };
 //Roi cong dong
 export const leaveCommunity = async (req, res) => {
-    const { user_id, community_id } = req.body;
-
+    const {  community_id } = req.body;
+    const user_id=req.user.id;
     if (!user_id || !community_id) {
         return res.status(400).json({ message: "Thiếu user_id hoặc community_id" });
     }
@@ -346,46 +347,46 @@ export const leaveCommunity = async (req, res) => {
 };
 
 //Xem thong tin cong dong 
-export const getCommunityDetails=async(req,res)=>{
-  const id = req.params.id;
-  if(!id) return res.status(400).json({message:"Thiếu trường id !"});
-  try{
-    const details="SELECT * FROM communities WHERE id=?";
-    const [result] = await db.query(details, [id]);
-    return res.status(200).json({
-      message: "Lấy thông tin cộng đồng thành công",
-      data: result[0]
-    });
+  export const getCommunityDetails=async(req,res)=>{
+    const id = req.params.id;
+    if(!id) return res.status(400).json({message:"Thiếu trường id !"});
+    try{
+      const details="SELECT * FROM communities WHERE id=?";
+      const [result] = await db.query(details, [id]);
+      return res.status(200).json({
+        message: "Lấy thông tin cộng đồng thành công",
+        data: result[0]
+      });
 
-  } catch (error) {
-      console.error("Lỗi lấy thông tin cộng đồng: ", error);
-      return res.status(500).json({ message: "Lỗi Server", error: error.message });
-    }
-};
-//Danh sach bai viet theo tung cong dong
-export const getPostCommunityByID=async(req,res)=>{
-  const community_id = req.params.community_id;
-  if(!community_id) return res.status(400).json({message:"Thiếu trường id !"});
-  try{
-    const sql = `
-      SELECT p.*, u.username, u.avatar 
-      FROM posts p
-        JOIN users u ON p.user_id = u.id
-      WHERE p.community_id = ?
-      ORDER BY p.created_at DESC
-    `;
-    const [result] = await db.query(sql, [community_id]);
-    return res.status(200).json({
-      message: "Lấy thông tin danh sách bài viết thành công !",
-      count: result.length,
-      data: result
-    });
+    } catch (error) {
+        console.error("Lỗi lấy thông tin cộng đồng: ", error);
+        return res.status(500).json({ message: "Lỗi Server", error: error.message });
+      }
+  };
+  //Danh sach bai viet theo tung cong dong
+  export const getPostCommunityByID=async(req,res)=>{
+    const community_id = req.params.community_id;
+    if(!community_id) return res.status(400).json({message:"Thiếu trường id !"});
+    try{
+      const sql = `
+        SELECT p.*, u.username, u.avatar 
+        FROM posts p
+          JOIN users u ON p.user_id = u.id
+        WHERE p.community_id = ?
+        ORDER BY p.created_at DESC
+      `;
+      const [result] = await db.query(sql, [community_id]);
+      return res.status(200).json({
+        message: "Lấy thông tin danh sách bài viết thành công !",
+        count: result.length,
+        data: result
+      });
 
-  } catch (error) {
-      console.error("Lỗi lấy thông tin danh sách bài viết: ", error);
-      return res.status(500).json({ message: "Lỗi Server", error: error.message });
-    }
-};
+    } catch (error) {
+        console.error("Lỗi lấy thông tin danh sách bài viết: ", error);
+        return res.status(500).json({ message: "Lỗi Server", error: error.message });
+      }
+  };
 
 export const searchCommunities = async (req, res) => {
     try {
