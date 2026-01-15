@@ -12,11 +12,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -292,8 +294,12 @@ fun CommunityScreen(
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
                 // Danh sách thành viên
+                // Danh sách thành viên
                 LazyColumn {
                     items(memberList) { member ->
+                        // 1. Tạo biến trạng thái để điều khiển menu của TỪNG item
+                        var isMenuExpanded by remember { mutableStateOf(false) }
+
                         ListItem(
                             leadingContent = {
                                 AsyncImage(
@@ -309,7 +315,6 @@ fun CommunityScreen(
                                 Text(member.name, fontWeight = FontWeight.Bold)
                             },
                             supportingContent = {
-                                // Hiển thị Role (Admin/Mod) nếu có
                                 if (member.role != "Member") {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Icon(
@@ -324,8 +329,54 @@ fun CommunityScreen(
                                 }
                             },
                             trailingContent = {
-                                IconButton(onClick = {}) {
-                                    Icon(Icons.Filled.MoreVert, contentDescription = null)
+                                // 2. Dùng Box để neo DropdownMenu vào nút 3 chấm
+                                Box {
+                                    IconButton(onClick = { isMenuExpanded = true }) {
+                                        Icon(Icons.Filled.MoreVert, contentDescription = "Tùy chọn")
+                                    }
+
+                                    // 3. Menu hiển thị khi bấm
+                                    DropdownMenu(
+                                        expanded = isMenuExpanded,
+                                        onDismissRequest = { isMenuExpanded = false },
+                                        modifier = Modifier.background(Color.White)
+                                    ) {
+                                        // Nút Kick
+                                        DropdownMenuItem(
+                                            text = { Text("Kick khỏi nhóm", color = Color.Red) },
+                                            leadingIcon = {
+                                                Icon(
+                                                    imageVector = Icons.Default.Block,
+                                                    contentDescription = null,
+                                                    tint = Color.Red
+                                                )
+                                            },
+                                            onClick = {
+                                                isMenuExpanded = false
+                                                // TODO: Gọi API Kick thành viên tại đây
+                                                // controller.kickMember(member.id)
+                                            }
+                                        )
+
+                                        // Nút Nâng cấp (Chỉ hiện nếu chưa phải Admin/Mod)
+                                        if (member.role == "Member") {
+                                            DropdownMenuItem(
+                                                text = { Text("Nâng làm Moderator") },
+                                                leadingIcon = {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Security,
+                                                        contentDescription = null,
+                                                        tint = Color(0xFF0079D3)
+                                                    )
+                                                },
+                                                onClick = {
+                                                    isMenuExpanded = false
+                                                    // TODO: Gọi API Nâng quyền tại đây
+                                                    // controller.promoteMember(member.id)
+                                                }
+                                            )
+                                        }
+                                    }
                                 }
                             },
                             colors = ListItemDefaults.colors(containerColor = Color.White)
