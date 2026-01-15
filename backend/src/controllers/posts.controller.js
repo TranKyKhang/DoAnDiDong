@@ -65,7 +65,7 @@ export const getPostDetail = async (req, res) => {
 export const updatePost = async (req, res) => {
   try {
     const { postId } = req.params;
-    const userId = req.user.id; 
+    const userId = req.user.id;
     const { content, link_url } = req.body;
 
     const images = req.files?.images || [];
@@ -86,7 +86,7 @@ export const updatePost = async (req, res) => {
 
     const post = existing[0];
 
-   
+
     if (post.user_id !== userId) {
       return res.status(403).json({
         success: false,
@@ -94,7 +94,7 @@ export const updatePost = async (req, res) => {
       });
     }
 
-   
+
     const fields = [];
     const values = [];
 
@@ -110,7 +110,7 @@ export const updatePost = async (req, res) => {
 
     if (videoFile) {
       if (post.video) {
-        await removeFile(post.video); 
+        await removeFile(post.video);
       }
 
       const videoPath = `/upload/posts/videos/${videoFile.filename}`;
@@ -128,7 +128,7 @@ export const updatePost = async (req, res) => {
       await db.execute(sql, values);
     }
 
- 
+
     if (images.length > 0) {
       const [oldImages] = await db.execute(
         "SELECT image FROM POST_IMAGES WHERE post_id = ?",
@@ -168,5 +168,149 @@ export const updatePost = async (req, res) => {
       success: false,
       message: "Server error"
     });
+  }
+};
+
+export const getFollowedFeed = async (req, res) => {
+  const userId = req.user.id;
+  const limit = parseInt(req.query.limit) || 20;
+  const offset = (parseInt(req.query.page) - 1) * limit || 0;
+
+  try {
+    const [rows] = await db.query(
+      `SELECT 
+                p.*, 
+                c.name AS community_name,
+                u.username AS author_name,
+                v.type AS user_vote_status
+            FROM posts p
+            INNER JOIN users_communities f ON p.community_id = f.community_id
+            INNER JOIN communities c ON p.community_id = c.id
+            INNER JOIN users u ON p.user_id = u.id
+            LEFT JOIN votes v ON v.post_id = p.id 
+                AND v.target = 'post' 
+                AND v.user_id = ?
+            WHERE f.user_id = ? AND p.is_removed = 0
+            ORDER BY p.created_at DESC
+            LIMIT ? OFFSET ?;`,
+      [userId, userId, limit, offset]
+    );
+
+    res.json({
+      success: true,
+      data: rows
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const getPopularPosts = async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    console.log("ok")
+    const [rows] = await db.query(
+      `SELECT 
+    p.*,
+    COALESCE(
+        (SELECT JSON_ARRAYAGG(m.image) -- Đổi JSON_AGG thành JSON_ARRAYAGG
+         FROM post_images m 
+         WHERE m.post_id = p.id), 
+        JSON_ARRAY()
+    ) AS images,
+    c.name AS community_name,
+    u.username AS author_name,
+    u.avatar AS authorAvatarUrl,
+    v.type AS user_vote_status,
+    ((p.upvotes - p.downvotes) / 
+    POWER(TIMESTAMPDIFF(MINUTE, p.created_at, CURRENT_TIMESTAMP)/3600 + 2, 1.5)) AS hot_score
+FROM posts p
+INNER JOIN communities c ON p.community_id = c.id
+INNER JOIN users u ON p.user_id = u.id
+LEFT JOIN votes v ON v.post_id = p.id 
+    AND v.target = 'post' 
+    AND v.user_id = 6
+WHERE p.is_removed = 0
+ORDER BY hot_score DESC
+LIMIT 20;`,
+      [userId]
+    );
+
+
+    res.json({
+      success: true,
+      data: rows
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const getUserPost = async (req, res) => {
+  const { userId } = req.body;
+  const limit = parseInt(req.query.limit) || 20;
+  const offset = (parseInt(req.query.page) - 1) * limit || 0;
+
+  try {
+    const [rows] = await db.query(
+      `SELECT 
+                p.*, 
+                c.name AS community_name,
+                u.username AS author_name,
+                u.avatar AS authorAvatarUrl,
+                v.type AS user_vote_status
+            FROM posts p
+            INNER JOIN communities c ON p.community_id = c.id
+            INNER JOIN users u ON p.user_id = u.id
+            LEFT JOIN votes v ON v.post_id = p.id 
+                AND v.target = 'post' 
+                AND v.user_id = ?
+            WHERE p.user_id = ? AND p.is_removed = 0
+            ORDER BY p.created_at DESC
+            LIMIT ? OFFSET ?;`,
+      [userId, userId, limit, offset]
+    );
+
+    res.json({
+      success: true,
+      data: rows
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const getCommunityPosts = async (req, res) => {
+  const { userId } = req.body;
+  const { id } = req.params;
+  const limit = parseInt(req.query.limit) || 20;
+  const offset = (parseInt(req.query.page) - 1) * limit || 0;
+
+  try {
+    const [rows] = await db.query(
+      `SELECT 
+                p.*, 
+                c.name AS community_name,
+                u.username AS author_name,
+                v.type AS user_vote_status
+            FROM posts p
+            INNER JOIN communities c ON p.community_id = c.id
+            INNER JOIN users u ON p.user_id = u.id
+            LEFT JOIN votes v ON v.post_id = p.id 
+                AND v.target = 'post' 
+                AND v.user_id = ?
+            WHERE p.community_id = ? AND p.is_removed = 0
+            ORDER BY p.created_at DESC
+            LIMIT ? OFFSET ?;`,
+      [userId, id, limit, offset]
+    );
+    console.log(rows);
+    res.json({
+      success: true,
+      data: rows
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 };
