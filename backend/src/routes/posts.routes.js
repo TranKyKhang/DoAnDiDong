@@ -3,9 +3,18 @@ import upload from "../middlewares/uploadMedia.middleware.js";
 import  {updatePost} from "../controllers/posts.controller.js";
 import  {getPostDetail} from "../controllers/posts.controller.js";
 import { verifyToken } from '../middlewares/auth.middleware.js';
-import { getFollowedFeed, getPopularPosts, getUserPost, getCommunityPosts } from "../controllers/posts.controller.js";
+import { getFollowedFeed, getPopularPosts, getUserPost, getCommunityPosts, createPost } from "../controllers/posts.controller.js";
 
 const router = express.Router();
+
+router.post(
+  "/create",verifyToken,
+  upload.fields([
+    { name: "images", maxCount: 20 },
+    { name: "video", maxCount: 1 }
+  ]),
+  createPost 
+);
 
 router.put(
   "/:postId",verifyToken,

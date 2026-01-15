@@ -9,7 +9,7 @@ import {getCommunitiesByUser} from '../controllers/community.controller.js';
 import {joinCommunity} from '../controllers/community.controller.js';
 import {leaveCommunity} from '../controllers/community.controller.js';
 import {getCommunityDetails} from '../controllers/community.controller.js';
-import {getPostCommunityByID} from '../controllers/community.controller.js';
+import {getPostCommunityByID, searchCommunities} from '../controllers/community.controller.js';
 import upload from '../middlewares/uploadMedia.middleware.js';
 import { verifyToken } from '../middlewares/auth.middleware.js';
 const router = express.Router();
@@ -41,4 +41,5 @@ router.put(
   verifyToken,
   changeRole
 );
+router.get("/search", verifyToken, searchCommunities);
 export default router;

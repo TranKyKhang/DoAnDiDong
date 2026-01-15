@@ -386,3 +386,43 @@ export const getPostCommunityByID=async(req,res)=>{
       return res.status(500).json({ message: "Lỗi Server", error: error.message });
     }
 };
+
+export const searchCommunities = async (req, res) => {
+    try {
+        const { q } = req.query;
+
+        if (!q || q.trim().length === 0) {
+            return res.json({ success: true, data: [] });
+        }
+
+        const sql = `
+            SELECT 
+                id, 
+                name,
+                icon
+            FROM communities
+            WHERE name LIKE ?
+            ORDER BY 
+                CASE 
+                    WHEN name = ? THEN 1      -- Exact match gets top priority
+                    WHEN name LIKE ? THEN 2   -- "Starts with" gets second priority
+                    ELSE 3                    -- "Contains" gets third priority
+                END,
+                name ASC
+            LIMIT 10`;
+
+        const exactMatch = q;
+        const startsWith = `${q}%`;
+        const contains = `%${q}%`;
+
+        const [results] = await db.query(sql, [contains, exactMatch, startsWith]);
+
+        res.json({
+            success: true,
+            data: results
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
