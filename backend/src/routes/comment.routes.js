@@ -9,6 +9,5 @@ router.get("/post/:id", commentController.getCommentsByPost);
 
 router.post("/", commentController.createComment);
 
-router.patch("/:id/vote", commentController.voteComment);
 
 export default router;

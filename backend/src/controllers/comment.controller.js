@@ -63,7 +63,7 @@ export const getCommentsByPost = async (req, res) => {
     }
 };
 export const getCommentDetail = async (req, res) => {
-    const { id } = req.params; // Lấy comment_id từ URL
+    const { id } = req.params; 
 
     if (!id) {
         return res.status(400).json({ success: false, message: "Thiếu Comment ID" });
@@ -121,32 +121,5 @@ export const createComment = async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ success: false, error: err.message });
-    }
-};
-
-export const voteComment = async (req, res) => {
-    const { id } = req.params; 
-    const { type } = req.body; 
-
-    if (!type || (type !== 'up' && type !== 'down')) {
-        return res.status(400).json({ success: false, message: "Loại vote không hợp lệ" });
-    }
-
-    try {
-        const result = await CommentModel.vote(id, type);
-        
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ success: false, message: "Không tìm thấy bình luận" });
-        }
-
-        res.json({ 
-            success: true, 
-            message: `Đã ${type === 'up' ? 'Upvote' : 'Downvote'} thành công!`,
-            voteType: type 
-        });
-
-    } catch (err) {
-        console.error("Lỗi Vote:", err);
-        return res.status(500).json({ success: false, error: err.message });
     }
 };
