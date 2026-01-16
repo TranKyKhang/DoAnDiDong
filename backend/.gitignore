@@ -1,2 +1,4 @@
+__tests__/
+.qodo/
 node_modules/
 .env

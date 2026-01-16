@@ -352,6 +352,13 @@ export const createPost = async (req, res) => {
         const { title, content, community_id, link_url } = req.body;
         const userId = req.user.id; 
 
+        if (!community_id || community_id === "null" || community_id === "") {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Vui lòng chọn một cộng đồng để đăng bài." 
+            });
+        }
+
         let videoPath = null;
         if (req.files?.video) {
             videoPath = `/upload/posts/videos/${req.files.video[0].filename}`;
