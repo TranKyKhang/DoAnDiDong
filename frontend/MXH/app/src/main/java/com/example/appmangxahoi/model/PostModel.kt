@@ -8,6 +8,12 @@ data class PostResponse(
     val data: List<PostModel>     // Đây mới là cái list bạn cần lấy
 )
 @Serializable
+data class CreatePostResponse(
+    val success: Boolean,
+    val data: CreatedPostModel
+)
+
+@Serializable
 data class PostModel(
     val id: Int,
     val title: String,
@@ -61,3 +67,23 @@ data class PostModel(
         get() = _isRemoved == 1
 }
 
+@Serializable
+data class CreatedPostModel(
+    val id: Int,
+
+    val title: String,
+    val content: String,
+
+    @SerialName("community_id")
+    val communityId: Int? = null,
+
+    @SerialName("user_id")
+    val userId: Int,
+
+    val video: String? = null,
+
+    val images: List<String> = emptyList(),
+
+    @SerialName("created_at")
+    val createdAt: String? = null
+)

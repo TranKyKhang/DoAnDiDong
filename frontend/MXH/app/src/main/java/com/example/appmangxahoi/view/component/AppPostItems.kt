@@ -95,6 +95,16 @@ fun AppPostItem(post: PostModel) {
                     color = Color.DarkGray
                 )
             }
+            // ===== HIỂN THỊ LINK URL =====
+            if (!post.linkUrl.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = post.linkUrl,
+                    color = Color(0xFF0079D3), // xanh giống Reddit
+                    fontSize = 13.sp,
+                    maxLines = 1
+                )
+            }
 
             // --- IMAGE / VIDEO SECTION ---
             // Ưu tiên hiển thị Video trước

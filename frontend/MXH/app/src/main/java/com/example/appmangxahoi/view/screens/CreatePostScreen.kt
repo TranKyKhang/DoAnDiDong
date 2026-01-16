@@ -6,20 +6,14 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PlayCircle
-import androidx.compose.material.icons.filled.Public
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material.icons.outlined.Link
-import androidx.compose.material.icons.outlined.Poll
 import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -27,259 +21,308 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-
-// Data mẫu cho cộng đồng
-data class CommunityOption(val id: String, val name: String, val iconUrl: String?)
+import com.example.appmangxahoi.controller.community
+import com.example.appmangxahoi.controller.post
+import com.example.appmangxahoi.model.CommunityModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreatePostScreen(
-    onContentChange: (Boolean) -> Unit
+    onContentChange: (Boolean) -> Unit,
+    onPostSuccess: () -> Unit,
+    onPostFail: (String?) -> Unit
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    val communityController = remember { community() }
+    val postController = remember { post() }
+
+    var communities by remember { mutableStateOf<List<CommunityModel>>(emptyList()) }
+    var selectedCommunity by remember { mutableStateOf<CommunityModel?>(null) }
+
     var title by remember { mutableStateOf("") }
     var body by remember { mutableStateOf("") }
-    var selectedUri by remember { mutableStateOf<Uri?>(null) }
-    var isVideo by remember { mutableStateOf(false) }
 
-    // --- LOGIC CHỌN CỘNG ĐỒNG ---
-    // 1. Trạng thái hiển thị BottomSheet
-    var showBottomSheet by remember { mutableStateOf(false) }
+    var imageUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
+    var videoUri by remember { mutableStateOf<Uri?>(null) }
+
+    var linkUrl by remember { mutableStateOf("") }
+    var showLinkDialog by remember { mutableStateOf(false) }
+
+    var submitting by remember { mutableStateOf(false) }
+
+    var showCommunitySheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
 
-    // 2. Cộng đồng đang chọn (Null = Trang cá nhân)
-    var selectedCommunity by remember { mutableStateOf<CommunityOption?>(null) }
-
-    // 3. Mock Data các cộng đồng
-    val communities = listOf(
-        CommunityOption("1", "r/android_dev", "https://picsum.photos/50"),
-        CommunityOption("2", "r/vietnam_travel", "https://picsum.photos/51"),
-        CommunityOption("3", "r/meme_daily", "https://picsum.photos/52")
-    )
-
-    val mediaPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia()
-    ) { uri: Uri? ->
-        if (uri != null) {
-            selectedUri = uri
-        }
+    // ===== LOAD COMMUNITY =====
+    LaunchedEffect(Unit) {
+        communities = communityController.getMyCommunity(context) ?: emptyList()
     }
 
-    LaunchedEffect(title, selectedUri) {
-        onContentChange(title.isNotEmpty() || selectedUri != null)
+    // ===== PICK IMAGE =====
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickMultipleVisualMedia(10)
+    ) { uris ->
+        imageUris = uris
+        videoUri = null
+        linkUrl = ""
     }
 
-    // --- GIAO DIỆN CHÍNH ---
+    // ===== PICK VIDEO =====
+    val videoPickerLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        videoUri = uri
+        imageUris = emptyList()
+        linkUrl = ""
+    }
+
+    // ===== ENABLE SUBMIT =====
+    LaunchedEffect(title, imageUris, videoUri, linkUrl) {
+        onContentChange(
+            title.isNotBlank() ||
+                    imageUris.isNotEmpty() ||
+                    videoUri != null ||
+                    linkUrl.isNotBlank()
+        )
+    }
+
+    // ================= UI =================
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
             .padding(16.dp)
     ) {
-        // === 1. NÚT CHỌN NƠI ĐĂNG (MỚI THÊM) ===
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(bottom = 16.dp)
+
+        // ===== PICK COMMUNITY =====
+        Surface(
+            onClick = { showCommunitySheet = true },
+            shape = RoundedCornerShape(20.dp),
+            color = Color(0xFFF2F2F2),
+            modifier = Modifier.height(40.dp)
         ) {
-            // Nút bấm mở BottomSheet
-            Surface(
-                onClick = { showBottomSheet = true },
-                shape = RoundedCornerShape(20.dp),
-                color = Color(0xFFF0F0F0), // Màu xám nhẹ
-                modifier = Modifier.height(40.dp)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(horizontal = 12.dp)
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(horizontal = 12.dp)
-                ) {
-                    // Icon (Nếu chọn Profile thì hiện hình người, Cộng đồng thì hiện hình Trái đất)
-                    val icon = if (selectedCommunity == null) Icons.Default.Person else Icons.Default.Public
-                    Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.Gray)
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    // Tên hiển thị
-                    Text(
-                        text = selectedCommunity?.name ?: "Trang cá nhân (u/otis)", // Nếu null thì hiện Profile
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
+                if (selectedCommunity?.icon != null) {
+                    AsyncImage(
+                        model = "http://10.0.2.2:3000${selectedCommunity!!.icon}",
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
                     )
-
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, modifier = Modifier.size(18.dp))
+                } else {
+                    Icon(Icons.Default.Person, contentDescription = null)
                 }
+
+
+
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    selectedCommunity?.name ?: "Trang cá nhân",
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.width(4.dp))
+                Icon(Icons.Default.KeyboardArrowDown, null)
             }
         }
 
-        // --- PHẦN NHẬP TEXT ---
+        Spacer(Modifier.height(12.dp))
+
+        // ===== TITLE =====
         TextField(
             value = title,
             onValueChange = { title = it },
-            placeholder = { Text("Tiêu đề thú vị", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.Gray) },
-            textStyle = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.Bold),
+            placeholder = {
+                Text("Tiêu đề", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+            },
+            textStyle = TextStyle(fontSize = 22.sp, fontWeight = FontWeight.Bold),
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = Color.Transparent,
                 unfocusedContainerColor = Color.Transparent,
                 focusedIndicatorColor = Color.Transparent,
                 unfocusedIndicatorColor = Color.Transparent
-            ),
-            modifier = Modifier.fillMaxWidth()
+            )
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
-
+        // ===== BODY =====
         TextField(
             value = body,
             onValueChange = { body = it },
-            placeholder = { Text("Bạn đang nghĩ gì?", fontSize = 16.sp, color = Color.Gray) },
-            textStyle = TextStyle(fontSize = 16.sp),
+            placeholder = { Text("Nội dung bài viết") },
+            modifier = Modifier.weight(1f),
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = Color.Transparent,
                 unfocusedContainerColor = Color.Transparent,
                 focusedIndicatorColor = Color.Transparent,
                 unfocusedIndicatorColor = Color.Transparent
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
+            )
         )
 
-        // --- PREVIEW ẢNH/VIDEO (CŨ) ---
-        if (selectedUri != null) {
-            Box(
+        // ===== LINK PREVIEW =====
+        if (linkUrl.isNotBlank()) {
+            Text(
+                "🔗 $linkUrl",
+                color = Color(0xFF0079D3),
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+        }
+
+        // ===== IMAGE PREVIEW =====
+        if (imageUris.isNotEmpty()) {
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState())
+            ) {
+                imageUris.forEach { uri ->
+                    AsyncImage(
+                        model = uri,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(120.dp)
+                            .padding(end = 8.dp)
+                            .clip(RoundedCornerShape(12.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+            }
+        }
+
+        // ===== VIDEO PREVIEW =====
+        videoUri?.let {
+            AsyncImage(
+                model = it,
+                contentDescription = null,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(200.dp)
-                    .padding(vertical = 8.dp)
-            ) {
-                AsyncImage(
-                    model = selectedUri,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color.LightGray)
-                )
-
-                if (isVideo) {
-                    Icon(
-                        imageVector = Icons.Filled.PlayCircle,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier
-                            .size(50.dp)
-                            .align(Alignment.Center)
-                            .background(Color.Black.copy(alpha = 0.4f), CircleShape)
-                    )
-                }
-
-                IconButton(
-                    onClick = { selectedUri = null },
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(4.dp)
-                        .background(Color.Black.copy(alpha = 0.6f), CircleShape)
-                        .size(24.dp)
-                ) {
-                    Icon(Icons.Filled.Close, null, tint = Color.White, modifier = Modifier.size(16.dp))
-                }
-            }
+            )
         }
 
-        // --- TOOLBAR (CŨ) ---
-        HorizontalDivider(thickness = 0.5.dp, color = Color.LightGray)
+        HorizontalDivider()
+
+        // ===== ATTACH BAR =====
         Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceAround
         ) {
-            AttachmentIcon(Icons.Outlined.Link, onClick = {})
-            AttachmentIcon(Icons.Outlined.Image, onClick = {
-                isVideo = false
-                mediaPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-            })
-            AttachmentIcon(Icons.Outlined.VideoLibrary, onClick = {
-                isVideo = true
-                mediaPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly))
-            })
-            AttachmentIcon(Icons.Outlined.Poll, onClick = {})
-        }
-    }
-
-    // === 2. BOTTOM SHEET ĐỂ CHỌN CỘNG ĐỒNG (MỚI THÊM) ===
-    if (showBottomSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showBottomSheet = false },
-            sheetState = sheetState
-        ) {
-            Column(modifier = Modifier.padding(bottom = 32.dp)) {
-                Text(
-                    "Chọn nơi đăng",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(16.dp)
+            IconButton(onClick = {
+                imagePickerLauncher.launch(
+                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                 )
+            }) {
+                Icon(Icons.Outlined.Image, null)
+            }
 
-                // Lựa chọn 1: Trang cá nhân
-                ListItem(
-                    headlineContent = { Text("Trang cá nhân của bạn", fontWeight = FontWeight.Bold) },
-                    leadingContent = {
-                        Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(40.dp))
-                    },
-                    trailingContent = {
-                        // Hiện dấu tick nếu đang chọn
-                        if (selectedCommunity == null) {
-                            Text("✓", color = Color.Blue, fontWeight = FontWeight.Bold)
-                        }
-                    },
-                    modifier = Modifier.clickable {
-                        selectedCommunity = null // Chọn trang cá nhân
-                        showBottomSheet = false
-                    }
+            IconButton(onClick = {
+                videoPickerLauncher.launch(
+                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly)
                 )
+            }) {
+                Icon(Icons.Outlined.VideoLibrary, null)
+            }
 
-                HorizontalDivider()
-
-                Text("Cộng đồng của bạn", modifier = Modifier.padding(16.dp), color = Color.Gray)
-
-                // Lựa chọn 2: Danh sách cộng đồng
-                LazyColumn {
-                    items(communities) { community ->
-                        ListItem(
-                            headlineContent = { Text(community.name) },
-                            leadingContent = {
-                                AsyncImage(
-                                    model = community.iconUrl,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(40.dp).clip(CircleShape).background(Color.LightGray)
-                                )
-                            },
-                            trailingContent = {
-                                if (selectedCommunity?.id == community.id) {
-                                    Text("✓", color = Color.Blue, fontWeight = FontWeight.Bold)
-                                }
-                            },
-                            modifier = Modifier.clickable {
-                                selectedCommunity = community // Lưu cộng đồng đã chọn
-                                showBottomSheet = false
-                            }
-                        )
-                    }
-                }
+            IconButton(onClick = {
+                showLinkDialog = true
+                imageUris = emptyList()
+                videoUri = null
+            }) {
+                Icon(Icons.Default.Link, null)
             }
         }
-    }
-}
 
-@Composable
-fun AttachmentIcon(icon: ImageVector, onClick: () -> Unit) {
-    IconButton(onClick = onClick) {
-        Icon(imageVector = icon, contentDescription = null, tint = Color.Gray)
+        // ===== SUBMIT =====
+        Button(
+            onClick = {
+                scope.launch {
+                    submitting = true
+                    val success = postController.createPost(
+                        context = context,
+                        title = title,
+                        content = body,
+                        communityId = selectedCommunity?.id,
+                        imageUris = imageUris,
+                        videoUri = videoUri,
+                        linkUrl = linkUrl
+                    )
+                    submitting = false
+                    if (success) {
+                        onPostSuccess()
+                    } else {
+                        onPostFail("Đăng bài thất bại  Vui lòng thử lại")
+                    }
+                }
+            },
+            enabled = title.isNotBlank() && !submitting,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0079D3))
+        ) {
+            Text("Đăng bài", color = Color.White, fontWeight = FontWeight.Bold)
+        }
+    }
+
+    // ===== LINK DIALOG =====
+    if (showLinkDialog) {
+        AlertDialog(
+            onDismissRequest = { showLinkDialog = false },
+            title = { Text("Nhập link") },
+            text = {
+                OutlinedTextField(
+                    value = linkUrl,
+                    onValueChange = { linkUrl = it },
+                    placeholder = { Text("https://...") }
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { showLinkDialog = false }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
+
+    // ===== COMMUNITY SHEET =====
+    if (showCommunitySheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showCommunitySheet = false },
+            sheetState = sheetState
+        ) {
+            communities.forEach {
+                ListItem(
+                    leadingContent = {
+                        if (it.icon != null) {
+                            AsyncImage(
+                                model = "http://10.0.2.2:3000${it.icon}",
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Icon(Icons.Default.Public, null)
+                        }
+                    },
+                    headlineContent = { Text(it.name) },
+                    modifier = Modifier.clickable {
+                        selectedCommunity = it
+                        showCommunitySheet = false
+                    }
+                )
+
+            }
+        }
     }
 }

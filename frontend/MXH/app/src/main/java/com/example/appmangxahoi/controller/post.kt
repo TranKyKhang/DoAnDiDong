@@ -1,6 +1,7 @@
 package com.example.appmangxahoi.controller
 
 import android.content.Context
+import android.net.Uri
 import android.util.Log
 import com.example.appmangxahoi.model.PostModel
 import com.example.appmangxahoi.model.PostResponse
@@ -12,7 +13,10 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import java.io.File
+import kotlin.collections.forEachIndexed
 
 class post {
     private val client = OkHttpClient()
@@ -240,5 +244,100 @@ class post {
             Log.d("API_DEBUG", "Vote response: ${response.code}")
         }
     }
+    suspend fun createPost(
+        context: Context,
+        title: String,
+        content: String?,
+        communityId: Int?,
+        imageUris: List<Uri> = emptyList(),
+        videoUri: Uri? = null,
+        linkUrl: String? = null
+    ): Boolean = withContext(Dispatchers.IO) {
+
+        try {
+            val token = TokenManager.getToken(context)
+                ?: return@withContext false
+
+            val bodyBuilder = MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+
+            // ===== TEXT =====
+            bodyBuilder.addFormDataPart("title", title)
+
+            content?.let {
+                bodyBuilder.addFormDataPart("content", it)
+            }
+
+            communityId?.let {
+                bodyBuilder.addFormDataPart("community_id", it.toString())
+            }
+
+            linkUrl?.let {
+                bodyBuilder.addFormDataPart("link_url", it)
+            }
+
+
+            imageUris.forEach { uri ->
+                val file = uriToFile(context, uri)
+                bodyBuilder.addFormDataPart(
+                    "images",
+                    file.name,
+                    file.asRequestBody("image/*".toMediaType())
+                )
+            }
+
+
+            videoUri?.let { uri ->
+                val file = uriToFile(context, uri)
+                bodyBuilder.addFormDataPart(
+                    "video",
+                    file.name,
+                    file.asRequestBody("video/*".toMediaType())
+                )
+            }
+
+            val request = Request.Builder()
+                .url("$BASE_URL/api/posts/create")
+                .post(bodyBuilder.build())
+                .addHeader("Authorization", "Bearer $token")
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                response.isSuccessful
+            }
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    fun uriToFile(context: Context, uri: Any): File {
+        val realUri = uri as Uri
+
+        val contentResolver = context.contentResolver
+        val mimeType = contentResolver.getType(realUri)
+
+        val extension = when (mimeType) {
+            "image/png" -> ".png"
+            "image/jpeg", "image/jpg" -> ".jpg"
+            "image/webp" -> ".webp"
+            "video/mp4" -> ".mp4"
+            else -> ""
+        }
+
+        val inputStream = contentResolver.openInputStream(realUri)!!
+        val file = File(
+            context.cacheDir,
+            "upload_${System.currentTimeMillis()}$extension"
+        )
+
+        file.outputStream().use { output ->
+            inputStream.copyTo(output)
+        }
+
+        return file
+    }
+
 
 }
