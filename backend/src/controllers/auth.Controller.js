@@ -6,7 +6,6 @@ import redis from 'redis';
 import { sendResetOTPEmail } from '../utils/email.js';
 import generateDiscriminator from '../utils/generateDiscriminator.js';
 import pool from '../config/db.js';
-import { JWT_SECRET } from '../middlewares/auth.middleware.js';
 
 const redisClient = redis.createClient({
   url: process.env.REDIS_URL || 'redis://localhost:6379'
@@ -43,7 +42,7 @@ export const register = async (req, res) => {
       [email, fullUsername, hashedPassword, username]
     );
 
-    const token = jwt.sign({ id: result.insertId, username: fullUsername }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ id: result.insertId, username: fullUsername }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
     res.status(201).json({
       success: true,
@@ -80,7 +79,7 @@ export const login = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Email hoặc mật khẩu không đúng' });
     }
 
-    const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
     res.json({
       success: true,

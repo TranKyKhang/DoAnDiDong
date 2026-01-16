@@ -3,7 +3,6 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs'; // chỉ dùng nếu cần
 import pool from '../config/db.js';
 import generateDiscriminator from '../utils/generateDiscriminator.js';
-import { JWT_SECRET } from '../middlewares/auth.middleware.js';
 
 // Hàm helper để tìm hoặc tạo user từ Google payload
 const findOrCreateGoogleUser = async (payload) => {
@@ -51,7 +50,7 @@ export const googleLogin = async (req, res) => {
 
     const user = await findOrCreateGoogleUser(payload);
 
-    const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
     res.json({
       success: true,
