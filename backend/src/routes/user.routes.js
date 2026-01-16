@@ -1,0 +1,37 @@
+import express from "express";
+import uploadAvatar from "../middlewares/uploadAvatar.middleware.js";
+import { verifyToken } from '../middlewares/auth.middleware.js';
+import { googleLogin } from '../controllers/google.controller.js';
+import {
+  register,
+  login,
+  forgotPassword,
+  verifyResetOtp
+} from '../controllers/auth.Controller.js';
+import {
+  getAllUsers,
+  getProfile,
+  updateProfile,
+  changePassword
+} from "../controllers/user.controller.js";
+
+const router = express.Router();
+
+router.post('/register', register);
+router.post('/login', login);
+router.post('/forgot-password', forgotPassword);
+router.post('/verify-reset-otp', verifyResetOtp);
+router.post('/google-login', googleLogin);
+
+
+router.get('/profile', verifyToken, getProfile);
+router.put('/profile-update', verifyToken, uploadAvatar.fields([
+    { name: "avatar", maxCount: 1 },
+    { name: "banner", maxCount: 1 }
+  ]),
+  updateProfile);
+router.post('/change-password', verifyToken, changePassword);
+router.get("/users", verifyToken, getAllUsers);
+
+
+export default router;
