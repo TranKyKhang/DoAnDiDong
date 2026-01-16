@@ -26,10 +26,10 @@ router.put(
 );
 
 
-router.get("/followed", getFollowedFeed);
+router.get("/followed", verifyToken, getFollowedFeed);
 router.get("/popular", verifyToken, getPopularPosts);
-router.get("/my-posts", getUserPost);
-router.get("/community/:id", getCommunityPosts);
+router.get("/my-posts", verifyToken, getUserPost);
+router.get("/community/:id", verifyToken, getCommunityPosts);
 router.get("/:id", verifyToken, getPostDetail);
 
 export default router; 

@@ -86,10 +86,10 @@ export const updateProfile = async (req, res) => {
 
 export const getProfile = async (req, res) => {
   try {
-    console.log("JWT user:", req.user.id);
+    
 
     const [rows] = await db.execute(
-      "SELECT id, email, username, display_name, banner, avatar FROM users WHERE id = ?",
+      "SELECT id,bio, email, username, display_name, banner, avatar,post_rating,comment_rating FROM users WHERE id = ?",
       [req.user.id]
     );
 

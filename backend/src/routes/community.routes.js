@@ -22,7 +22,8 @@ router.post(
     '/create', upload.fields([
         { name: 'icon', maxCount: 1 }, 
         { name: 'banner', maxCount: 1 }
-    ])
+    ]),
+    verifyToken
     ,createCommunities
 );
 //Lay danh sach communities theo users

@@ -17,8 +17,6 @@ export const getAllCommunity = async (req, res) => {
 };
 
 export const banUser = async (req, res) => {
-    console.log("BODY:", req.body);
-    console.log("PARAMS:", req.params);
     try {
         const { communityId } = req.params;
         const { userId } = req.body; 
@@ -218,53 +216,80 @@ export const changeRole = async (req, res) => {
 
 
 
-
 // Huy
 // Tao cong dong
 export const createCommunities = async (req, res) => {
     // Lay du lieu tu client
-    const { name, description } = req.body;
+    const { name, description, rules } = req.body;
     const user_id=req.user.id;
+    let iconPath = null;
+    let bannerPath = null;
+
+    if (req.files) {
+        if (req.files['icon']) {
+            iconPath = `/upload/communities/icons/${req.files['icon'][0].filename}`;
+        }
+        
+        if (req.files['banner']) {
+            bannerPath = `/upload/communities/banners/${req.files['banner'][0].filename}`;
+        }
+    }
+
     if (!name || !user_id) {
         return res.status(400).json({ message: "Tên cộng đồng và ID người tạo là bắt buộc!" });
     }
-    try {
-        const checkQuery = 'SELECT id FROM communities WHERE name = ?';
-        const [existing] = await db.query(checkQuery, [name]);
 
+    let newCommunityId = null;
+    try {
+        const [existing] = await db.query('SELECT id FROM communities WHERE name = ?', [name]);
         if (existing.length > 0) {
             return res.status(409).json({ message: "Tên cộng đồng này đã tồn tại!" });
         }
 
-        // 1. Them cong dong moi vao DB
         const insertQuery = `
-            INSERT INTO communities (name, description, user_id) 
-            VALUES (?, ?, ?)
+            INSERT INTO communities (name, description, user_id, icon, banner, rules, member_count) 
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         `;
-        const [result] = await db.query(insertQuery, [name, description, user_id]); 
-        const newCommunityId = result.insertId; 
+        
+        const [result] = await db.query(insertQuery, [
+            name, 
+            description, 
+            user_id, 
+            iconPath,   
+            bannerPath, 
+            rules || null, 
+            1 
+        ]);
+        
+        newCommunityId = result.insertId;
 
-        await db.query(
-            'INSERT INTO users_communities (community_id, user_id,role) VALUES (?, ?,"moderator"))', 
-            [newCommunityId, user_id]
-        );
+    } catch (error) {
+        console.error("Lỗi tạo cộng đồng:", error);
+        return res.status(500).json({ step: "Create Community", message: error.message });
+    }
 
-        // Tra ve ket qua thanh cong
+    try {
+        const insertMemberQuery = "INSERT INTO users_communities (community_id, user_id, `role`) VALUES (?, ?, ?)";
+        
+        await db.query(insertMemberQuery, [newCommunityId, user_id, 'admin']);
+
         return res.status(201).json({
             message: "Tạo cộng đồng thành công",
             communityId: newCommunityId,
-            data: {
-                name: name,
-                description: description
+            data: { 
+                name, 
+                description, 
+                icon: iconPath, 
+                banner: bannerPath,
+                member_count: 1 
             }
         });
 
     } catch (error) {
-        console.error("Lỗi tạo tự động: ", error);
-        return res.status(500).json({ message: "Lỗi Server", error: error.message });
+        console.error("Lỗi thêm admin:", error);
+        return res.status(500).json({ step: "Add Admin", message: error.message });
     }
 };
-
 // Hàm lấy danh sách cộng đồng mà user đã tham gia
 export const getCommunitiesByUser = async (req, res) => {
     const userId = req.user.id;
@@ -314,8 +339,11 @@ export const joinCommunity=async(req,res)=>{
       return res.status(409).json({ message: "Bạn đã tham gia cộng đồng này rồi!" });
     }
     await db.query(insertQuery, [user_id, community_id]);
+
+    const updateCountQuery = "UPDATE communities SET member_count = member_count + 1 WHERE id = ?";
+    await db.query(updateCountQuery, [community_id]);
+
     return res.status(200).json({ message: "Tham gia thành công!" });
-    
   }catch(error){
     console.error("Lỗi join community: ", error);
     return res.status(500).json({ message: "Lỗi Server", error: error.message });
@@ -338,6 +366,10 @@ export const leaveCommunity = async (req, res) => {
       if (result.affectedRows === 0) {
         return res.status(404).json({ message: "Bạn chưa tham gia cộng đồng này nên không thể rời!" });
       }
+
+      const updateCountQuery = "UPDATE communities SET member_count = member_count - 1 WHERE id = ?";
+      await db.query(updateCountQuery, [community_id]);
+
       return res.status(200).json({ message: "Đã rời cộng đồng thành công." });
 
     }catch (error) {

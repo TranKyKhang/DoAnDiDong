@@ -5,8 +5,14 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack // Icon mũ
 import androidx.compose.material.icons.filled.Settings // Icon cài đặt
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import com.example.appmangxahoi.controller.post
+import com.example.appmangxahoi.model.PostModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

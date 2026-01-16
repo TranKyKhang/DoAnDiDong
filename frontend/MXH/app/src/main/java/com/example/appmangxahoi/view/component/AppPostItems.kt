@@ -1,258 +1,315 @@
 package com.example.appmangxahoi.view.component
-// --- CÁC IMPORT CẦN THIẾT CHO JETPACK COMPOSE & MATERIAL 3 ---
 
-// 1. Các thành phần giao diện cơ bản (Layout, Modifier, Graphics)
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-
-// 2. Thư viện Material Design 3 (Card, Text, Button, Icon...)
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-
-// 3. Thư viện Icon (Biểu tượng)
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.ThumbDown
 import androidx.compose.material.icons.outlined.ThumbUp
-import androidx.compose.material3.VerticalDivider
-
-// 4. Thư viện Coil (Để load ảnh từ mạng)
-import coil.compose.AsyncImage
-
-// 5. Nếu bạn dùng Preview (tùy chọn)
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.appmangxahoi.model.DataClassPost
+import coil.compose.AsyncImage
+import com.example.appmangxahoi.controller.post
 
-    @Composable
-    fun AppPostItem(post: DataClassPost,onItemClick: () -> Unit = {}) {
-        Card(
-            colors = CardDefaults.cardColors(containerColor = Color.White), // Hoặc MaterialTheme.colorScheme.surface
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp, horizontal = 8.dp) // Khoảng cách giữa các bài
-                .clickable { onItemClick() }
-        ) {
-            Column(modifier = Modifier.padding(12.dp)) {
-                // --- HEADER: Subreddit + Author + Time ---
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    // Avatar subreddit giả
-                    AsyncImage(
-                        model = post.authorAvatarUrl,
-                        contentDescription = "Avatar",
-                        contentScale = ContentScale.Crop, // Cắt ảnh cho vừa khung tròn
-                        modifier = Modifier
-                            .size(32.dp)           // Kích thước avatar (Reddit thường dùng 32dp hoặc 40dp)
-                            .clip(CircleShape)     // Bo tròn thành hình tròn
-                            .background(Color.LightGray) // Màu nền hiện trong lúc đang tải ảnh
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
+import com.example.appmangxahoi.model.PostModel
+import kotlinx.coroutines.launch
 
+// Đặt Base URL của bạn ở đây (IP máy tính hoặc Domain server)
+const val BASE_URL = "http://10.0.2.2:3000" // Thay IP thật của bạn vào
+
+@Composable
+fun AppPostItem(post: PostModel) {
+    // Xử lý dữ liệu URL ảnh/video
+    val avatarUrl = post.authorAvatarUrl?.let { "$BASE_URL$it" }
+    val videoFullUrl = post.video?.let { "$BASE_URL$it" }
+    // Lấy ảnh đầu tiên trong mảng images làm ảnh hiển thị hoặc thumbnail video
+    val firstImageUrl = post.images.firstOrNull()?.let { "$BASE_URL$it" }
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp, horizontal = 8.dp)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            // --- HEADER: Subreddit + Author + Time ---
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Avatar Author
+                AsyncImage(
+                    model = avatarUrl,
+                    contentDescription = "Avatar",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(Color.LightGray)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Column {
                     Text(
-                        text = "${post.subreddit} • ${post.timeAgo}",
+                        text = "r/${post.communityName}", // Thêm prefix r/ cho giống Reddit
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                    Text(
+                        text = "u/${post.authorName} • ${post.createdAt}", // Format lại ngày tháng sau nhé
                         style = MaterialTheme.typography.labelSmall,
                         color = Color.Gray
                     )
                 }
+            }
 
-                Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-                // --- BODY: Title ---
+            // --- BODY: Title & Content ---
+            Text(
+                text = post.title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            if (post.content.isNotEmpty()) {
                 Text(
-                    text = post.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    text = post.content,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 3, // Giới hạn dòng nếu dài quá
+                    color = Color.DarkGray
                 )
+            }
+            // ===== HIỂN THỊ LINK URL =====
+            if (!post.linkUrl.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = post.linkUrl,
+                    color = Color(0xFF0079D3), // xanh giống Reddit
+                    fontSize = 13.sp,
+                    maxLines = 1
+                )
+            }
 
-                // --- IMAGE / VIDEO SECTION ---
-                if (post.imageUrl != null) {
-                    Spacer(modifier = Modifier.height(12.dp))
+            // --- IMAGE / VIDEO SECTION ---
+            // Ưu tiên hiển thị Video trước
+            if (videoFullUrl != null) {
+                Spacer(modifier = Modifier.height(12.dp))
 
-                    // [MỚI] Biến trạng thái: Đang phát hay không?
-                    var isPlaying by remember { mutableStateOf(false) }
+                var isPlaying by remember { mutableStateOf(false) }
 
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(240.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(Color.Black) // Nền đen cho video
-                    ) {
-                        // TRƯỜNG HỢP 1: ĐANG PHÁT VIDEO -> HIỆN PLAYER
-                        if (isPlaying && post.videoUrl != null) {
-                            VideoPlayer(
-                                videoUrl = post.videoUrl,
-                                modifier = Modifier.fillMaxSize()
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(240.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.Black)
+                ) {
+                    if (isPlaying) {
+                        // Gọi hàm Player (sẽ implement sau)
+                        VideoPlayer(videoUrl = videoFullUrl)
+                    } else {
+                        // Hiển thị Thumbnail (là ảnh đầu tiên của post) + Nút Play
+//                        if (firstImageUrl != null) {
+//                            AsyncImage(
+//                                model = firstImageUrl,
+//                                contentDescription = null,
+//                                contentScale = ContentScale.Crop,
+//                                modifier = Modifier.fillMaxSize().alpha(0.7f)
+//                            )
+//                        }
+
+                        IconButton(
+                            onClick = { isPlaying = true },
+                            modifier = Modifier.size(64.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.PlayCircle,
+                                contentDescription = "Play Video",
+                                tint = Color.White,
+                                modifier = Modifier
+                                    .size(64.dp)
+                                    .background(Color.Black.copy(alpha = 0.4f), CircleShape)
                             )
-                        }
-                        // TRƯỜNG HỢP 2: CHƯA PHÁT -> HIỆN ẢNH BÌA + NÚT PLAY
-                        else {
-                            AsyncImage(
-                                model = post.imageUrl,
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize().alpha(if (post.isVideo) 0.8f else 1f)
-                            )
-
-                            // Nếu là bài Video thì hiện nút Play to đùng
-                            if (post.isVideo) {
-                                IconButton(
-                                    onClick = {
-                                        isPlaying = true // <--- BẤM VÀO LÀ CHUYỂN TRẠNG THÁI
-                                    },
-                                    modifier = Modifier.size(64.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.PlayCircle,
-                                        contentDescription = "Play Video",
-                                        tint = Color.White,
-                                        modifier = Modifier
-                                            .size(64.dp)
-                                            .background(Color.Black.copy(alpha = 0.4f), CircleShape)
-                                    )
-                                }
-                            }
                         }
                     }
                 }
-
+            }
+            // Nếu không có Video thì kiểm tra có Ảnh không
+            else if (firstImageUrl != null) {
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // --- FOOTER: Actions (Vote, Comment, Share) ---
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    // Căn lề các nút Comment/Share sang bên phải
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    //CỤM NÚT VOTE
-                    VoteActionPill(voteCount = post.voteCount)
+                AsyncImage(
+                    model = firstImageUrl,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 300.dp) // Chiều cao linh hoạt
+                        .clip(RoundedCornerShape(12.dp))
+                )
+            }
 
-                    // Comment, Share
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { // Cách nhau 8dp
+            Spacer(modifier = Modifier.height(12.dp))
 
-                        // Viên Comment
-                        OutlinedButtonChip(
-                            icon = Icons.Outlined.ChatBubbleOutline,
-                            text = post.commentCount
-                        )
+            // --- FOOTER: Actions ---
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Tính toán số vote hiển thị (Up - Down)
+                val voteScore = post.rating
+                VoteActionPill(voteCount = voteScore, status = post.userVoteStatus, postId = post.id)
 
-                        // Viên Share
-                        OutlinedButtonChip(
-                            icon = Icons.Outlined.Share,
-                            text = "Share"
-                        )
-                    }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Comment (Chuyển Int sang String)
+                    OutlinedButtonChip(
+                        icon = Icons.Outlined.ChatBubbleOutline,
+                        text = post.commentCount.toString()
+                    )
+
+                    OutlinedButtonChip(
+                        icon = Icons.Outlined.Share,
+                        text = "Share"
+                    )
                 }
             }
         }
     }
-//Composable like,dislike
+}
+
+// --- CÁC COMPOSABLE PHỤ TRỢ ---
+
 @Composable
-fun VoteActionPill(voteCount: String) {
-    val pillShape = RoundedCornerShape(50) // Hình dạng viên thuốc (bo tròn tối đa)
-    val iconSize = 20.dp // Kích thước icon nhỏ gọn
+fun VoteActionPill(postId: Int, voteCount: Int, status: String?) {
+    Log.d("voteStatus", status.toString())
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    var postController = remember { post() }
+    var id = remember { mutableIntStateOf(postId) }
+    var count = remember { mutableStateOf(voteCount) }
+    var isUpvoted by remember { mutableStateOf(status?.replace("\"", "") == "upvote") }
+    var isDownvoted by remember { mutableStateOf(status?.replace("\"", "") == "downvote") }
+
+    val pillShape = RoundedCornerShape(50)
+    val iconSize = 20.dp
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
-            // Tạo viền màu xám nhạt
             .border(1.dp, MaterialTheme.colorScheme.outlineVariant, pillShape)
-            .padding(horizontal = 4.dp, vertical = 2.dp) // Padding bên trong viên thuốc để nó không bị sát quá
+            .padding(horizontal = 4.dp, vertical = 2.dp)
     ) {
-        // Nút Upvote
-        IconButton(onClick = { /* Xử lý Upvote */ }, modifier = Modifier.size(32.dp)) {
+        IconButton(onClick = {
+            scope.launch {
+                postController.handleVote(context,id.value,"upvote")
+            }
+
+            when {
+                isUpvoted -> {
+                    count.value--
+                    isUpvoted = false
+                }
+
+                isDownvoted -> {
+                    count.value += 2
+                    isDownvoted = false
+                    isUpvoted = true
+                }
+
+                else -> {
+                    count.value++
+                    isUpvoted = true
+                }
+            }
+        }, modifier = Modifier.size(32.dp)) {
             Icon(
                 imageVector = Icons.Outlined.ThumbUp,
                 contentDescription = "Upvote",
                 modifier = Modifier.size(iconSize),
-                tint = Color.Gray // Màu xám khi chưa bấm
+                tint = if (isUpvoted) Color.Blue else Color.Gray
             )
         }
 
-        // Số Vote
         Text(
-            text = voteCount,
+            text = count.value.toString(),
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,
             fontSize = 13.sp,
-            modifier = Modifier.padding(horizontal = 2.dp) // Khoảng cách rất nhỏ giữa số và icon
+            modifier = Modifier.padding(horizontal = 2.dp)
         )
-        //Dau gach o giua
+
         VerticalDivider(
-            thickness = 1.dp,       // Độ dày của nét
-            color = Color.LightGray,// Màu xám nhạt
-            modifier = Modifier
-                .height(14.dp)      // Chiều cao của gạch (ngắn hơn chiều cao nút)
-                .padding(horizontal = 2.dp) // Khoảng cách 2 bên gạch
+            thickness = 1.dp,
+            color = Color.LightGray,
+            modifier = Modifier.height(14.dp).padding(horizontal = 2.dp)
         )
-        // Nút Downvote
-        IconButton(onClick = { /* Xử lý Downvote */ }, modifier = Modifier.size(32.dp)) {
+
+        IconButton(onClick = {
+            scope.launch {
+                postController.handleVote(context,id.value,"downvote")
+            }
+
+            when {
+                isDownvoted -> {
+                    count.value++
+                    isDownvoted = false
+                }
+                isUpvoted -> {
+                    count.value -= 2
+                    isUpvoted = false
+                    isDownvoted = true
+                }
+                else -> {
+                    count.value--
+                    isDownvoted = true
+                }
+            }
+        }, modifier = Modifier.size(32.dp)) {
             Icon(
                 imageVector = Icons.Outlined.ThumbDown,
                 contentDescription = "Downvote",
                 modifier = Modifier.size(iconSize),
-                tint = Color.Gray
+                tint = if (isDownvoted) Color.Red else Color.Gray
             )
         }
     }
 }
 
-//Composable comment,share
 @Composable
 fun OutlinedButtonChip(icon: ImageVector, text: String) {
-    val pillShape = RoundedCornerShape(50) // Bo tròn
+    val pillShape = RoundedCornerShape(50)
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, pillShape) // Viền xám
-            .padding(horizontal = 12.dp, vertical = 6.dp) // Padding bên trong để nút trông đầy đặn
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, pillShape)
+            .padding(horizontal = 12.dp, vertical = 6.dp)
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
             tint = Color.Gray,
-            modifier = Modifier.size(18.dp) // Icon nhỏ xinh
+            modifier = Modifier.size(18.dp)
         )
-
-        Spacer(modifier = Modifier.width(6.dp)) // Khoảng cách giữa Icon và Chữ
-
+        Spacer(modifier = Modifier.width(6.dp))
         Text(
             text = text,
             style = MaterialTheme.typography.labelMedium,
@@ -262,12 +319,14 @@ fun OutlinedButtonChip(icon: ImageVector, text: String) {
     }
 }
 
-// Hàm phụ để vẽ nút bấm cho gọn code
+// Composable giả lập Video Player để không bị lỗi compile
 @Composable
-fun ActionItem(icon: ImageVector, text: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(imageVector = icon, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(20.dp))
-        Spacer(modifier = Modifier.width(4.dp))
-        Text(text = text, style = MaterialTheme.typography.labelMedium, color = Color.Gray)
+fun VideoPlayerPlaceholder(url: String) {
+    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+        Text(
+            text = "Đang phát video...\n$url",
+            color = Color.White,
+            modifier = Modifier.align(Alignment.Center)
+        )
     }
 }

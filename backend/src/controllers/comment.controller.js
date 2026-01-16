@@ -1,14 +1,13 @@
-const CommentModel = require("../models/comment.model");
+import CommentModel from "../models/comment.model.js";
 
+/* ======================
+   BUILD COMMENT TREE
+====================== */
 const calculateDepth = (nodes, level) => {
     nodes.forEach(node => {
         node.depth_level = level;
-        node.upvotes = node.upvotes || 0;
-        node.downvotes = node.downvotes || 0;
-        node.rating = node.rating || 0;
-        node.is_removed = node.is_removed || 0;
-
-        if (node.children && node.children.length > 0) {
+        node.children = node.children || [];
+        if (node.children.length > 0) {
             calculateDepth(node.children, level + 1);
         }
     });
@@ -19,14 +18,13 @@ const buildCommentTree = (comments) => {
     const tree = [];
 
     comments.forEach((c, index) => {
-        map[c.id] = index; 
-        c.children = [];   
+        map[c.id] = index;
+        c.children = [];
     });
 
     comments.forEach(c => {
-        if (c.parent_id !== null && map[c.parent_id] !== undefined) {
-            const parentIndex = map[c.parent_id];
-            comments[parentIndex].children.push(c);
+        if (c.parent_id && map[c.parent_id] !== undefined) {
+            comments[map[c.parent_id]].children.push(c);
         } else {
             tree.push(c);
         }
@@ -36,95 +34,96 @@ const buildCommentTree = (comments) => {
     return tree;
 };
 
-
-exports.getCommentsByPost = async (req, res) => {
-    const postId = req.params.id; 
+/* ======================
+   GET COMMENTS BY POST
+====================== */
+export const getCommentsByPost = async (req, res) => {
+    console.log(">>> VÀO getCommentsByPost");
+    const userId = req.user.id;
+    const postId = req.params.id;
 
     if (!postId) {
-        return res.status(400).json({ success: false, message: "Thiếu Post ID" });
+        return res.status(400).json({
+            success: false,
+            message: "Thiếu post_id"
+        });
     }
 
     try {
-        const rawData = await CommentModel.getByPostId(postId);
+        console.log(">>> Vao TRY");
 
-        const flatComments = JSON.parse(JSON.stringify(rawData));
-        const totalCount = flatComments.length;
+        const comments = await CommentModel.getByPostId(postId, userId);
+        console.log("COMMENTS RAW =", comments);
 
-        const tree = buildCommentTree(flatComments);
+        const tree = buildCommentTree(comments);
 
-        res.json({
+        console.log(">>>    TRUOC RETURN res.json");
+        console.log("COMMENTS LENGTH =", comments.length);
+        
+        console.log(tree);
+
+        return res.json({
             success: true,
-            count: totalCount,
-            data: tree 
+            count: comments.length,
+            data: tree
         });
 
     } catch (err) {
-        console.error("Lỗi Controller:", err);
-        res.status(500).json({ success: false, error: err.message });
+        console.error("Get comments error:", err);
+        return res.status(500).json({
+            success: false,
+            error: err.message
+        });
     }
 };
 
-exports.createComment = async (req, res) => {
+/* ======================
+   CREATE COMMENT
+====================== */
+export const createComment = async (req, res) => {
     try {
-        const { content, user_id, post_id, parent_id } = req.body;
+        const { content, post_id, parent_id } = req.body;
+        const user_id = req.user.id;
 
-        if (!content || !user_id || !post_id) {
-            return res.status(400).json({ success: false, message: "Thiếu thông tin" });
+        if (!content || !post_id) {
+            return res.status(400).json({
+                success: false,
+                message: "Thiếu nội dung hoặc post_id"
+            });
         }
 
-        let newDepthLevel = 0;
+        let depth_level = 0;
 
         if (parent_id) {
-            const parentComment = await CommentModel.getById(parent_id);
-            if (!parentComment) {
-                return res.status(404).json({ success: false, message: "Comment cha không tồn tại" });
+            const parent = await CommentModel.getById(parent_id);
+            if (!parent) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Comment cha không tồn tại"
+                });
             }
-            newDepthLevel = (parentComment.depth_level || 0) + 1;
+            depth_level = parent.depth_level + 1;
         }
 
         const result = await CommentModel.create({
-            content, 
-            user_id, 
-            post_id, 
-            parent_id, 
-            depth_level: newDepthLevel
+            content,
+            user_id,
+            post_id,
+            parent_id,
+            depth_level
         });
 
-        res.status(201).json({ 
-            success: true, 
-            message: "Đã đăng bình luận!", 
-            commentId: result.insertId 
-        });
-
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ success: false, error: err.message });
-    }
-};
-
-exports.voteComment = async (req, res) => {
-    const { id } = req.params; 
-    const { type } = req.body; // 'up' hoặc 'down'
-
-    if (!type || (type !== 'up' && type !== 'down')) {
-        return res.status(400).json({ success: false, message: "Loại vote không hợp lệ (chỉ 'up' hoặc 'down')" });
-    }
-
-    try {
-        const result = await CommentModel.vote(id, type);
-        
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ success: false, message: "Không tìm thấy bình luận để vote" });
-        }
-
-        res.json({ 
-            success: true, 
-            message: `Đã ${type === 'up' ? 'Upvote' : 'Downvote'} thành công!`,
-            voteType: type 
+        return res.status(201).json({
+            success: true,
+            message: "Đã đăng bình luận!",
+            commentId: result.insertId
         });
 
     } catch (err) {
-        console.error("Lỗi Vote:", err);
-        return res.status(500).json({ success: false, error: err.message });
+        console.error("Create comment error:", err);
+        return res.status(500).json({
+            success: false,
+            error: err.message
+        });
     }
 };

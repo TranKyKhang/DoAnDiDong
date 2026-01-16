@@ -39,12 +39,12 @@ fun SearchScreen(
         else mockPosts.filter { post ->
             // Điều kiện 1: Phải khớp từ khóa
             val matchesQuery = post.title.contains(query, ignoreCase = true) ||
-                    post.author.contains(query, ignoreCase = true) ||
-                    post.subreddit.contains(query, ignoreCase = true)
+                    post.authorName.contains(query, ignoreCase = true) ||
+                    post.communityName.contains(query, ignoreCase = true)
 
             // Điều kiện 2: Nếu đang ở trong nhóm, bài viết phải thuộc nhóm đó
             val matchesCommunity = if (targetDisplayName != null) {
-                post.subreddit == targetDisplayName
+                post.communityName == targetDisplayName
             } else {
                 true // Nếu không có targetCommunity thì lấy hết
             }

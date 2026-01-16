@@ -19,26 +19,49 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.appmangxahoi.controller.community
+import com.example.appmangxahoi.controller.post
+import com.example.appmangxahoi.model.CommunityModel
+import com.example.appmangxahoi.model.PostModel
 import com.example.appmangxahoi.model.mockPosts
 import com.example.appmangxahoi.view.component.AppPostItem
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CommunityScreen(
-    communityName: String,
+    communityId: Int,
     onBackClick: () -> Unit,
     onSearchClick: () -> Unit
 ) {
-    val displayName = remember(communityName) { communityName.replace("_", "/") }
+    val context = LocalContext.current
+    val postController = remember { post() }
+    val communityController = remember { community() }
+
+    var community by remember { mutableStateOf<CommunityModel?>(null) }
+    var posts by remember { mutableStateOf<List<PostModel>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+
     var isJoined by remember { mutableStateOf(false) }
     var isNotified by remember { mutableStateOf(false) }
 
-    val communityPosts = remember(displayName) {
-        mockPosts.filter { it.subreddit == displayName }.ifEmpty { mockPosts }
+    // ===== LOAD DATA =====
+    LaunchedEffect(communityId) {
+        posts = postController.getCommunityPosts(context, communityId) ?: emptyList()
+        community = communityController.getCommunitybyId(context, communityId)
+        isLoading = false
+    }
+
+    // ===== LOADING =====
+    if (isLoading) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
     }
 
     Scaffold(
@@ -48,127 +71,127 @@ fun CommunityScreen(
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = null,
+                            tint = Color.White,
                             modifier = Modifier
-                                .background(Color.Black.copy(alpha = 0.4f), CircleShape)
-                                .padding(8.dp),
-                            tint = Color.White
+                                .background(Color.Black.copy(0.4f), CircleShape)
+                                .padding(8.dp)
                         )
                     }
                 },
                 actions = {
-                    // --- 2. SỬA NÚT SEARCH ---
-                    IconButton(onClick = onSearchClick) { // Gọi hàm điều hướng khi click
+                    IconButton(onClick = onSearchClick) {
                         Icon(
-                            imageVector = Icons.Filled.Search,
-                            contentDescription = "Search",
+                            Icons.Filled.Search,
+                            contentDescription = null,
+                            tint = Color.White,
                             modifier = Modifier
-                                .background(Color.Black.copy(alpha = 0.4f), CircleShape)
-                                .padding(8.dp),
-                            tint = Color.White
+                                .background(Color.Black.copy(0.4f), CircleShape)
+                                .padding(8.dp)
                         )
                     }
-
-
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
         }
     ) { padding ->
+
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color(0xFFF0F0F0)),
             contentPadding = PaddingValues(bottom = padding.calculateBottomPadding())
         ) {
+
+            // ===== HEADER =====
             item {
                 Column(modifier = Modifier.background(Color.White)) {
+
                     Box(modifier = Modifier.height(200.dp)) {
                         AsyncImage(
-                            model = "https://picsum.photos/seed/${communityName}banner/800/400",
-                            contentDescription = "Banner",
+                            model = community?.banner?.let {
+                                "http://10.0.2.2:3000$it"
+                            } ?: "https://picsum.photos/800/400",
+                            contentDescription = null,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(140.dp)
-                                .background(Color.Gray)
                         )
+
                         AsyncImage(
-                            model = "https://ui-avatars.com/api/?name=$communityName&background=random&size=200",
-                            contentDescription = "Avatar",
+                            model = "http://10.0.2.2:3000${community?.icon}"
+                                ?: "https://ui-avatars.com/api/?name=${community?.name}",
+                            contentDescription = null,
                             modifier = Modifier
                                 .padding(start = 16.dp)
                                 .size(80.dp)
                                 .align(Alignment.BottomStart)
                                 .clip(CircleShape)
                                 .border(4.dp, Color.White, CircleShape)
-                                .background(Color.White)
                         )
                     }
 
-                    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = displayName,
+                                text = community?.name ?: "Community",
                                 fontSize = 24.sp,
                                 fontWeight = FontWeight.Bold
                             )
+
                             Row(verticalAlignment = Alignment.CenterVertically) {
+
                                 if (isJoined) {
                                     IconButton(onClick = { isNotified = !isNotified }) {
                                         Icon(
-                                            imageVector = if (isNotified) Icons.Filled.Notifications else Icons.Filled.NotificationsNone,
-                                            contentDescription = null,
-                                            tint = Color.Gray
+                                            if (isNotified)
+                                                Icons.Filled.Notifications
+                                            else
+                                                Icons.Filled.NotificationsNone,
+                                            contentDescription = null
                                         )
                                     }
                                 }
+
                                 Button(
                                     onClick = { isJoined = !isJoined },
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (isJoined) Color.LightGray.copy(alpha = 0.5f) else Color(0xFF0079D3),
-                                        contentColor = if (isJoined) Color.Black else Color.White
-                                    ),
                                     shape = RoundedCornerShape(50),
-                                    contentPadding = PaddingValues(horizontal = 20.dp),
                                     modifier = Modifier.height(36.dp)
                                 ) {
-                                    Text(
-                                        text = if (isJoined) "Đã tham gia" else "Tham gia",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 14.sp
-                                    )
+                                    Text(if (isJoined) "Đã tham gia" else "Tham gia")
                                 }
                             }
                         }
-                        Text(text = displayName, fontSize = 14.sp, color = Color.Gray)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("1.2m thành viên", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("•", fontSize = 12.sp, color = Color.Gray)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color(0xFF4CAF50)))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("4.5k đang online", fontSize = 12.sp, color = Color.Black)
-                        }
-                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // ===== SLUG =====
                         Text(
-                            text = "Chào mừng bạn đến với cộng đồng $displayName. Đây là nơi chia sẻ kiến thức, hỏi đáp và thảo luận về mọi chủ đề liên quan!",
+                            text = "r/${community?.name ?: ""}",
                             fontSize = 14.sp,
-                            lineHeight = 20.sp,
+                            color = Color.Gray
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // ===== DESCRIPTION =====
+                        Text(
+                            text = community?.description
+                                ?: "Chào mừng bạn đến với cộng đồng!",
+                            fontSize = 14.sp,
                             color = Color.DarkGray
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
             }
-            items(communityPosts) { post ->
+
+            // ===== POSTS =====
+            items(posts) { post ->
                 AppPostItem(post = post)
             }
         }

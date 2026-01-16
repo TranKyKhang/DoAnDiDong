@@ -14,7 +14,7 @@ const storage = multer.diskStorage({
   },
 });
 
-// File filter
+
 const fileFilter = (req, file, cb) => {
     console.log("Uploading file:", file.originalname, file.mimetype);
 
@@ -27,7 +27,7 @@ const fileFilter = (req, file, cb) => {
         "image/heic",
         "image/heif",
          "image/*",
-        "application/octet-stream" // tạm thời cho Android/Chrome
+        "application/octet-stream" 
     ];
 
     const allowedVideos = [
@@ -48,7 +48,7 @@ const fileFilter = (req, file, cb) => {
     }
 };
 
-// Export
+
 module.exports = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 },

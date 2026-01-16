@@ -1,20 +1,23 @@
 package com.example.appmangxahoi.view.screens
 
+import UserModel
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -22,284 +25,313 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
 import com.example.appmangxahoi.controller.User
-import com.example.appmangxahoi.model.UserModel
-import com.example.appmangxahoi.model.mockPosts // Đảm bảo đã import mockPosts
-import com.example.appmangxahoi.view.component.AppPostItem // Đảm bảo đã import AppPostItem
+import com.example.appmangxahoi.controller.post
+import com.example.appmangxahoi.model.PostModel
+import com.example.appmangxahoi.view.component.AppPostItem
 import kotlinx.coroutines.launch
 
 @Composable
-fun ProfileScreen(context: Context, userId: Int) {
+fun ProfileScreen(context: Context = LocalContext.current) {
+
     val userController = remember { User() }
+    val postController = remember { post() }
     val scope = rememberCoroutineScope()
 
     var profile by remember { mutableStateOf<UserModel?>(null) }
+    var posts by remember { mutableStateOf<List<PostModel>>(emptyList()) }
+    var loading by remember { mutableStateOf(true) }
     var showEditDialog by remember { mutableStateOf(false) }
 
-    // Load profile từ API
-    LaunchedEffect(userId) {
-        profile = userController.getUserProfile(userId)
+    var name by remember { mutableStateOf("") }
+    var bio by remember { mutableStateOf("") }
+    var avatarUrl by remember { mutableStateOf("") }
+    var coverUrl by remember { mutableStateOf("") }
+
+    /* ================= LOAD PROFILE + POSTS ================= */
+    LaunchedEffect(Unit) {
+        loading = true
+
+        profile = userController.getMyProfile(context)
+        posts = postController.getMyPosts(context) ?: emptyList()
+
+        loading = false
     }
 
-    // State hiển thị UI
-    var name by remember { mutableStateOf("Otis Dev") }
-    var bio by remember { mutableStateOf("Lập trình viên Mobile | Yêu thích Kotlin & Android") } // [MỚI] State Bio
-    var avatarUri by remember { mutableStateOf<Any>("https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200") }
-    var coverUri by remember { mutableStateOf<Any>("https://picsum.photos/800/400") }
-
-    // Cập nhật UI khi có dữ liệu từ API
+    /* ================= SYNC PROFILE DATA ================= */
     LaunchedEffect(profile) {
         profile?.let {
             name = it.displayName ?: "No name"
-            // Giả sử API trả về bio, nếu UserModel chưa có trường bio thì bạn cần thêm vào model
-            // bio = it.bio ?: "Chưa có tiểu sử" 
-            avatarUri = it.avatar?.let { path -> "http://10.0.2.2:3000$path" } ?: ""
-            coverUri = it.banner?.let { path -> "http://10.0.2.2:3000$path" } ?: ""
+            bio = it.bio ?: "Chưa có tiểu sử"
+
+            avatarUrl = it.avatar?.let { path ->
+                "http://10.0.2.2:3000$path?t=${System.currentTimeMillis()}"
+            } ?: ""
+
+            coverUrl = it.banner?.let { path ->
+                "http://10.0.2.2:3000$path?t=${System.currentTimeMillis()}"
+            } ?: ""
         }
     }
 
-    // Dialog chỉnh sửa
+    /* ================= EDIT DIALOG ================= */
     if (showEditDialog) {
         EditProfileDialog(
-            context = context,
             currentName = name,
-            currentBio = bio, // Truyền Bio hiện tại
-            currentAvatar = avatarUri,
-            currentCover = coverUri,
+            currentBio = bio,
+            currentAvatar = avatarUrl,
+            currentCover = coverUrl,
             onDismiss = { showEditDialog = false },
-            onSave = { newName, newBio, newAvatar, newCover ->
-                // Gọi API Update
+            onSave = { newName, newBio, avatarUri, bannerUri ->
                 scope.launch {
-                    val success = userController.updateProfile(
-                        context,
-                        userId,
-                        newName,
-                        newBio, // [QUAN TRỌNG] Truyền bio vào vị trí tham số thứ 4 (trước đó là null)
-                        newAvatar,
-                        newCover
+                    userController.updateProfile(
+                        context = context,
+                        displayName = newName,
+                        bio = newBio,
+                        avatarUri = avatarUri,
+                        bannerUri = bannerUri
                     )
-                    if (success) {
-                        // Update UI nếu thành công
-                        name = newName
-                        bio = newBio
-                        if (newAvatar != null) avatarUri = newAvatar
-                        if (newCover != null) coverUri = newCover
-                    }
+                    profile = userController.getMyProfile(context)
                     showEditDialog = false
                 }
             }
         )
     }
 
-    // UI chính: Dùng LazyColumn thay vì LazyVerticalGrid
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF2F4F8)) // Màu nền xám nhẹ
+    /* ================= LOADING ================= */
+    if (loading) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+
+    /* ================= UI ================= */
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(3),
+        modifier = Modifier.fillMaxSize().background(Color.White),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
-        // --- PHẦN HEADER PROFILE ---
-        item {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color.White)
-                    .padding(bottom = 16.dp)
-            ) {
-                // Ảnh bìa & Avatar
-                Box(contentAlignment = Alignment.BottomStart, modifier = Modifier.height(240.dp)) {
+
+        item(span = { GridItemSpan(3) }) {
+            Column {
+
+                /* ===== COVER + AVATAR ===== */
+                Box(modifier = Modifier.height(240.dp)) {
                     AsyncImage(
-                        model = coverUri,
-                        contentDescription = "Cover",
+                        model = coverUrl,
+                        contentDescription = null,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(200.dp)
-                            .background(Color.Gray)
                     )
+
                     AsyncImage(
-                        model = avatarUri,
-                        contentDescription = "Avatar",
-                        contentScale = ContentScale.Crop,
+                        model = avatarUrl,
+                        contentDescription = null,
                         modifier = Modifier
-                            .padding(start = 16.dp)
-                            .size(80.dp)
+                            .size(90.dp)
                             .clip(CircleShape)
                             .border(3.dp, Color.White, CircleShape)
-                            .background(Color.LightGray)
+                            .align(Alignment.BottomStart)
+                            .padding(start = 16.dp)
                     )
                 }
 
-                // Thông tin Text
-                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                            Text("u/otis_dev_2025", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
-                        }
-                        // Nút Edit
-                        IconButton(
-                            onClick = { showEditDialog = true },
-                            modifier = Modifier.background(Color(0xFFF0F0F0), CircleShape)
-                        ) {
-                            Icon(Icons.Filled.Edit, contentDescription = "Edit", tint = Color.Black)
-                        }
+                /* ===== NAME + EDIT ===== */
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
+                        Text("u/${profile?.username ?: ""}", color = Color.Gray)
                     }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // [MỚI] Hiển thị Bio
-                    Text(text = bio, style = MaterialTheme.typography.bodyMedium)
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    // Tuổi tài khoản
-                    Text("Thành viên từ 2024", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-
-                    Spacer(modifier = Modifier.height(16.dp))
-                    HorizontalDivider(thickness = 1.dp, color = Color(0xFFF0F0F0))
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // [MỚI] Thống kê Karma & Follower
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        KarmaCard(icon = Icons.Filled.Star, label = "Điểm uy tín", value = "12.5k", modifier = Modifier.weight(1f))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        KarmaCard(icon = Icons.Filled.Person, label = "Followers", value = "340", modifier = Modifier.weight(1f))
+                    IconButton(onClick = { showEditDialog = true }) {
+                        Icon(Icons.Default.Edit, contentDescription = null)
                     }
                 }
+
+                /* ===== BIO ===== */
+                Text(
+                    text = bio,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+
+                Spacer(Modifier.height(12.dp))
+
+                /* ===== POST & COMMENT RATING ===== */
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+
+                    /* POST RATING */
+                    Card(
+                        modifier = Modifier.weight(1f).height(90.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.Star,
+                                    contentDescription = null,
+                                    tint = Color(0xFFFF9800),
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    text = (profile?.postRating ?: 0).toString(),
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.titleLarge
+                                )
+                            }
+                            Spacer(Modifier.height(6.dp))
+                            Text("Post rating", fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    /* COMMENT RATING */
+                    Card(
+                        modifier = Modifier.weight(1f).height(90.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.Star,
+                                    contentDescription = null,
+                                    tint = Color(0xFFFF9800),
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    text = (profile?.commentRating ?: 0).toString(),
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.titleLarge
+                                )
+                            }
+                            Spacer(Modifier.height(6.dp))
+                            Text("Comment rating", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                Text(
+                    text = "Bài viết",
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(16.dp)
+                )
             }
-
-            // Tiêu đề danh sách bài viết
-            Text(
-                text = "Bài viết",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(16.dp)
-            )
         }
 
-        // --- DANH SÁCH BÀI VIẾT (CHI TIẾT) ---
-        // Sử dụng mockPosts và AppPostItem để hiển thị chi tiết thay vì Grid ảnh
-        items(mockPosts) { post ->
-            AppPostItem(post = post, onItemClick = { /* Xử lý click vào bài viết */ })
+        items(
+            items = posts,
+            span = { GridItemSpan(3) }
+        ) { post ->
+            AppPostItem(post = post, )
         }
 
-        // Padding bottom
-        item { Spacer(modifier = Modifier.height(16.dp)) }
     }
 }
 
-// --- Dialog chỉnh sửa (Cập nhật thêm Bio) ---
+/*  EDIT PROFILE DIALOG */
+
 @Composable
 fun EditProfileDialog(
-    context: Context,
     currentName: String,
-    currentBio: String, // [MỚI]
+    currentBio: String,
     currentAvatar: Any?,
     currentCover: Any?,
     onDismiss: () -> Unit,
-    onSave: (String, String, Uri?, Uri?) -> Unit // [MỚI] Thêm String cho Bio
+    onSave: (String, String, Uri?, Uri?) -> Unit
 ) {
-    var newName by remember { mutableStateOf(currentName) }
-    var newBio by remember { mutableStateOf(currentBio) } // [MỚI]
+    var name by remember { mutableStateOf(currentName) }
+    var bio by remember { mutableStateOf(currentBio) }
     var avatarUri by remember { mutableStateOf<Uri?>(null) }
     var bannerUri by remember { mutableStateOf<Uri?>(null) }
     var isAvatar by remember { mutableStateOf(true) }
 
     val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia()
-    ) { uri -> uri?.let { if (isAvatar) avatarUri = it else bannerUri = it } }
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        uri?.let { if (isAvatar) avatarUri = it else bannerUri = it }
+    }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(shape = RoundedCornerShape(16.dp)) {
             Column(Modifier.padding(20.dp)) {
-                Text("Chỉnh sửa hồ sơ", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
-                Spacer(Modifier.height(16.dp))
 
-                // Nhập tên
+                Text("Chỉnh sửa hồ sơ", fontWeight = FontWeight.Bold)
+
                 OutlinedTextField(
-                    value = newName,
-                    onValueChange = { newName = it },
+                    value = name,
+                    onValueChange = { name = it },
                     label = { Text("Tên hiển thị") },
                     modifier = Modifier.fillMaxWidth()
                 )
 
                 Spacer(Modifier.height(8.dp))
 
-                // [MỚI] Nhập Bio
                 OutlinedTextField(
-                    value = newBio,
-                    onValueChange = { newBio = it },
-                    label = { Text("Tiểu sử (Bio)") },
+                    value = bio,
+                    onValueChange = { bio = it },
+                    label = { Text("Tiểu sử") },
                     modifier = Modifier.fillMaxWidth(),
                     maxLines = 3
                 )
 
                 Spacer(Modifier.height(12.dp))
 
-                // Chọn ảnh Avatar
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    AsyncImage(
-                        model = avatarUri ?: currentAvatar,
-                        contentDescription = null,
-                        modifier = Modifier.size(50.dp).clip(CircleShape).background(Color.LightGray),
-                        contentScale = ContentScale.Crop
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    TextButton(onClick = { isAvatar = true; launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }) {
-                        Text("Đổi Avatar")
-                    }
+                TextButton(onClick = {
+                    isAvatar = true
+                    launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                }) {
+                    Text("Đổi avatar")
                 }
 
-                Spacer(Modifier.height(8.dp))
-
-                // Chọn ảnh Bìa
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    AsyncImage(
-                        model = bannerUri ?: currentCover,
-                        contentDescription = null,
-                        modifier = Modifier.width(80.dp).height(45.dp).clip(RoundedCornerShape(4.dp)).background(Color.LightGray),
-                        contentScale = ContentScale.Crop
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    TextButton(onClick = { isAvatar = false; launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }) {
-                        Text("Đổi Bìa")
-                    }
+                TextButton(onClick = {
+                    isAvatar = false
+                    launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                }) {
+                    Text("Đổi banner")
                 }
 
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(16.dp))
 
-                // Actions
-                Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
-                    TextButton(onClick = onDismiss) { Text("Hủy", color = Color.Gray) }
-                    Button(onClick = { onSave(newName, newBio, avatarUri, bannerUri) }) { Text("Lưu thay đổi") }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = onDismiss) { Text("Hủy") }
+                    Button(onClick = { onSave(name, bio, avatarUri, bannerUri) }) {
+                        Text("Lưu")
+                    }
                 }
             }
         }
     }
 }
 
-// --- Component hiển thị Karma ---
-@Composable
-fun KarmaCard(icon: ImageVector, label: String, value: String, modifier: Modifier = Modifier) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5)),
-        modifier = modifier
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Icon(imageVector = icon, contentDescription = null, tint = Color(0xFF0079D3))
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(text = value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Text(text = label, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-        }
-    }
-}
