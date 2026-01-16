@@ -1,4 +1,3 @@
-
 import express from "express";
 import { handleVote } from "../controllers/votes.controller.js"
 const router = express.Router();

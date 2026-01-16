@@ -11,11 +11,9 @@ import {leaveCommunity} from '../controllers/community.controller.js';
 import {getCommunityDetails} from '../controllers/community.controller.js';
 import {getPostCommunityByID} from '../controllers/community.controller.js';
 import upload from '../middlewares/uploadMedia.middleware.js';
+import { verifyToken } from '../middlewares/auth.middleware.js';
 const router = express.Router();
 
-router.put("/ban/:communityId",banUser)
-router.put("/unban/:communityId",unBanUser)
-router.put("/changerole/:communityId",changeRole)
 router.get("/", getAllCommunity);
 //Huy (Communities)
 // Định nghĩa API POST /api/communities/create
@@ -36,5 +34,11 @@ router.post('/leave', leaveCommunity);
 //Lay thong tin cong dong
 router.get('/details/:id',getCommunityDetails);
 router.get('/posts/:community_id',getPostCommunityByID);
-
+router.put("/:communityId/ban", verifyToken, banUser);
+router.put("/:communityId/unBan", verifyToken, unBanUser);
+router.put(
+  "/:communityId/change-role",
+  verifyToken,
+  changeRole
+);
 export default router;

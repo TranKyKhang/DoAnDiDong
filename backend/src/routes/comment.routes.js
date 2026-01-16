@@ -1,13 +1,17 @@
 import express from "express";
-import * as commentController from "../controllers/comment.controller.js"; 
-
 const router = express.Router();
 
-router.get("/:id", commentController.getCommentDetail);
+import { 
+  getCommentsByPost, 
+  createComment 
+} from "../controllers/comment.controller.js";
 
-router.get("/post/:id", commentController.getCommentsByPost);
+import { verifyToken } from "../middlewares/auth.middleware.js";
 
-router.post("/", commentController.createComment);
+// Lấy comment theo post
+router.get("/post/:id", getCommentsByPost);
 
+// Tạo comment (bắt buộc đăng nhập)
+router.post("/", verifyToken, createComment);
 
 export default router;
