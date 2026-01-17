@@ -2,67 +2,59 @@ package com.example.appmangxahoi.view.screens
 
 import android.widget.Toast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavType
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
+import androidx.navigation.compose.*
 import androidx.navigation.navArgument
-import com.example.appmangxahoi.controller.CommunityController
-import com.example.appmangxahoi.model.mockPosts
-import com.example.appmangxahoi.view.component.CreatePostTopBar
-import com.example.appmangxahoi.view.component.AppBottomBar
-import com.example.appmangxahoi.view.component.AppDrawer
-import com.example.appmangxahoi.view.component.AppPostItem
-import com.example.appmangxahoi.view.component.AppTopBar
 import com.example.appmangxahoi.controller.Screen
-import com.example.appmangxahoi.model.CommunityModel
+import com.example.appmangxahoi.controller.community
+import com.example.appmangxahoi.controller.post
+import com.example.appmangxahoi.model.PostModel
 import com.example.appmangxahoi.ui.screens.CreatePostScreen
-import com.example.appmangxahoi.view.component.ProfileTopBar
+import com.example.appmangxahoi.utils.TokenManager
+import com.example.appmangxahoi.view.component.*
 import kotlinx.coroutines.launch
-import androidx.compose.runtime.livedata.observeAsState
+
 @Composable
 fun AppHomeScreen() {
     val context = LocalContext.current
+    val postController = remember { post() }
+
+    // ✅ CHỈ 1 NavController
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
-    val currentFeedTitle = if (currentRoute == "popular") "Popular" else "Home"
 
+    // ===== STATE =====
+    var posts by remember { mutableStateOf<List<PostModel>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    var refreshFeed by remember { mutableStateOf(0) } // reload trigger
     var isPostButtonEnabled by remember { mutableStateOf(false) }
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-    val scope = rememberCoroutineScope()
 
-    // --- KHAI BÁO CONTROLLER VÀ STATE ---
-    val communityController = remember { CommunityController() }
-    var communityList by remember { mutableStateOf<List<CommunityModel>>(emptyList()) }
-    val currentUserId = 5
-    // --- HÀM LOAD DATA (Tách ra để dùng lại) ---
-    fun loadCommunities() {
-        scope.launch {
-            val list = communityController.getCommunitiesByUser(currentUserId)
-            communityList = list
-        }
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val community = remember { community() }
+
+    val currentFeedTitle =
+        if (currentRoute == "popular") "Popular" else "Home"
+
+    // ===== LOAD POSTS =====
+    LaunchedEffect(refreshFeed) {
+        isLoading = true
+        posts = postController.getFollowedPosts(context) ?: emptyList()
+        isLoading = false
     }
-    // --- LOAD LẦN ĐẦU KHI MỞ APP ---
-    LaunchedEffect(Unit) {
-        loadCommunities()
-    }
+
     // --- LẮNG NGHE TÍN HIỆU TỪ MÀN HÌNH CREATE_GROUP ---
     // Lấy entry hiện tại (Home)
     val currentEntry by navController.currentBackStackEntryAsState()
@@ -73,7 +65,7 @@ fun AppHomeScreen() {
     // Khi refreshNeeded đổi thành true -> Load lại list
     LaunchedEffect(refreshNeeded?.value) {
         if (refreshNeeded?.value == true) {
-            loadCommunities() // Gọi API lấy lại danh sách
+            community.getMyCommunity(context) // Gọi API lấy lại danh sách
             // Xóa cờ để tránh load lặp lại
             currentEntry?.savedStateHandle?.remove<Boolean>("refresh_communities")
         }
@@ -83,14 +75,12 @@ fun AppHomeScreen() {
         drawerState = drawerState,
         drawerContent = {
             AppDrawer(
-                onItemClick = { nameGroup ->
+                onItemClick = { id ->
                     scope.launch {
                         drawerState.close()
-                        val safeName = nameGroup.replace("/", "_")
-                        navController.navigate("community/$safeName")
+                        navController.navigate("community/$id")
                     }
                 },
-                communities = communityList,
                 onCreateGroupClick = {
                     scope.launch {
                         drawerState.close()
@@ -101,9 +91,11 @@ fun AppHomeScreen() {
         }
     ) {
         Scaffold(
+            snackbarHost = {
+                SnackbarHost(hostState = snackbarHostState)
+            },
             topBar = {
                 val isSearchRoute = currentRoute?.startsWith("search") == true
-                val isPostDetailRoute = currentRoute?.startsWith("post_detail") == true
                 when {
                     currentRoute == Screen.Profile.route -> {
                         ProfileTopBar(
@@ -111,43 +103,38 @@ fun AppHomeScreen() {
                             onSettingsClick = { navController.navigate("settings") }
                         )
                     }
+
                     currentRoute == Screen.Create.route -> {
                         CreatePostTopBar(
-                            onCloseClick = { navController.navigate(Screen.Home.route) },
-                            onPostClick = { /* Xử lý đăng bài */ },
+                            onCloseClick = {
+                                navController.popBackStack()
+                            },
+                            onPostClick = { },
                             isPostEnabled = isPostButtonEnabled
                         )
                     }
-                    // Ẩn TopBar ở các màn hình này
+
                     currentRoute == "settings" ||
                             currentRoute == "create_group" ||
-                            currentRoute == "change_password" ||
                             currentRoute?.startsWith("community/") == true ||
-                            isSearchRoute||
-                            isPostDetailRoute -> { }
+                            isSearchRoute -> {}
 
-                    // Màn Home/Popular/Inbox -> Hiện AppTopBar
                     else -> {
                         AppTopBar(
-                            currentFeed = currentFeedTitle, // Truyền tiêu đề (Home/Popular)
+                            currentFeed = currentFeedTitle,
                             onAvatarClick = { navController.navigate(Screen.Profile.route) },
                             onMenuClick = { scope.launch { drawerState.open() } },
                             onSearchClick = { navController.navigate("search") },
-
-                            // XỬ LÝ SỰ KIỆN CHỌN MENU (Home/Popular)
                             onFeedClick = { selected ->
                                 if (selected == "Popular") {
                                     navController.navigate("popular") {
-                                        // Giữ trạng thái Home, tránh reload lại từ đầu
                                         popUpTo(Screen.Home.route) { saveState = true }
                                         launchSingleTop = true
                                         restoreState = true
                                     }
                                 } else {
-                                    // Quay về Home
                                     navController.navigate(Screen.Home.route) {
                                         popUpTo(Screen.Home.route) { inclusive = true }
-                                        launchSingleTop = true
                                     }
                                 }
                             }
@@ -157,77 +144,92 @@ fun AppHomeScreen() {
             },
             bottomBar = {
                 val isSearchRoute = currentRoute?.startsWith("search") == true
-                val isPostDetailRoute = currentRoute?.startsWith("post_detail") == true
-                if (currentRoute != "settings" &&
-                    currentRoute != "create_group" &&
-                    !isSearchRoute &&
+                if (
                     currentRoute != Screen.Create.route &&
-                    !isPostDetailRoute &&
-                    currentRoute != "change_password"
+                    currentRoute != "settings" &&
+                    currentRoute != "create_group" &&
+                    !isSearchRoute
                 ) {
-                    AppBottomBar(navController = navController)
+                    AppBottomBar(navController)
                 }
             }
         ) { innerPadding ->
 
-            // --- NAVHOST ---
             NavHost(
                 navController = navController,
                 startDestination = Screen.Home.route,
                 modifier = Modifier.padding(
-                    // Chỉ lấy padding bottom, KHÔNG lấy padding top để tránh giật màn hình
                     bottom = innerPadding.calculateBottomPadding()
                 )
             ) {
-                // Màn Home
+
+                // ===== HOME =====
                 composable(Screen.Home.route) {
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
                             .background(Color(0xFFF0F0F0)),
-                        // Tự đẩy nội dung xuống bằng chiều cao TopBar
                         contentPadding = PaddingValues(
                             top = innerPadding.calculateTopPadding(),
                             bottom = 16.dp
                         )
                     ) {
-                        items(mockPosts) { post -> AppPostItem(
-                            post = post,
-                            onItemClick = {
-                                // Điều hướng sang màn hình chi tiết kèm ID bài viết
-                                navController.navigate("post_detail/${post.id}")
-                            }) }
+                        items(posts) { post ->
+                            AppPostItem(post = post)
+                        }
                     }
                 }
 
-                // --- MÀN HÌNH POPULAR  ---
+                // ===== POPULAR =====
                 composable("popular") {
                     PopularScreen(
-                        topPadding = innerPadding.calculateTopPadding(),
-                        onPostClick = { postId ->
-                            navController.navigate("post_detail/$postId") // Điều hướng tại đây
-                        }
+                        topPadding = innerPadding.calculateTopPadding()
                     )
                 }
 
-                // Màn Create
+                // ===== CREATE POST =====
                 composable(Screen.Create.route) {
-                    Box(modifier = Modifier.padding(top = innerPadding.calculateTopPadding())) {
+                    Box(
+                        modifier = Modifier.padding(
+                            top = innerPadding.calculateTopPadding()
+                        )
+                    ) {
                         CreatePostScreen(
-                            onContentChange = { isPostButtonEnabled = it }
+                            onContentChange = { isPostButtonEnabled = it },
+                            onPostSuccess = {
+                                refreshFeed++
+                                navController.popBackStack(Screen.Home.route, false)
+
+                                scope.launch {
+                                    snackbarHostState.showSnackbar(
+                                        "Đăng bài thành công ",
+                                        duration = SnackbarDuration.Long
+                                    )
+                                }
+                            },
+                            onPostFail = { errorMsg ->
+                                scope.launch {
+                                    snackbarHostState.showSnackbar(
+                                        errorMsg ?: "Đăng bài thất bại ",
+                                        duration = SnackbarDuration.Long
+                                    )
+                                }
+                            }
                         )
                     }
                 }
 
-                // Màn Inbox
+                // ===== INBOX =====
                 composable(Screen.Inbox.route) {
                     InboxScreen(topPadding = innerPadding.calculateTopPadding())
                 }
 
-                // Màn Profile
-                composable(Screen.Profile.route) { ProfileScreen( context = context, userId = 5) }
+                // ===== PROFILE =====
+                composable(Screen.Profile.route) {
+                    ProfileScreen(context = context)
+                }
 
-                // Màn Search
+                // ===== SEARCH =====
                 composable(
                     route = "search?community={community}",
                     arguments = listOf(navArgument("community") { nullable = true })
@@ -235,28 +237,21 @@ fun AppHomeScreen() {
                     val communityArg = backStackEntry.arguments?.getString("community")
                     SearchScreen(
                         onBackClick = { navController.popBackStack() },
-                        onPostClick = { },
+                        onPostClick = {},
                         targetCommunity = communityArg
                     )
                 }
 
-                // Các màn hình phụ khác
+                // ===== SETTINGS =====
                 composable("settings") {
-                    SettingScreen(
-                        onBackClick = { navController.popBackStack() },
-                        onChangePasswordClick = { navController.navigate("change_password")})
-                }
-                composable("change_password") {
-                    ChangePasswordScreen(
-                        onBackClick = { navController.popBackStack() }
-                    )
+                    SettingScreen(onBackClick = { navController.popBackStack() })
                 }
 
-
+                // ===== CREATE GROUP =====
                 composable("create_group") {
                     val context = LocalContext.current
                     val scope = rememberCoroutineScope() // Cần scope để chạy suspend function
-                    val controller = remember { CommunityController() } // Khởi tạo controller
+                    val controller = remember { community() } // Khởi tạo controller
 
                     CreateGroupScreen(
                         onDismiss = { navController.popBackStack() },
@@ -279,28 +274,25 @@ fun AppHomeScreen() {
                     )
                 }
 
-                composable("community/{name}") { backStackEntry ->
-                    val communityName = backStackEntry.arguments?.getString("name") ?: "Community"
-                    CommunityScreen(
-                        communityName = communityName,
-                        onBackClick = { navController.popBackStack() },
-                        onSearchClick = { navController.navigate("search?community=$communityName") }
-                    )
-                }
-
+                // ===== COMMUNITY =====
                 composable(
-                    route = "post_detail/{postId}", // Định nghĩa đường dẫn có tham số
-                    arguments = listOf(navArgument("postId") { type = NavType.IntType }) // Khai báo kiểu dữ liệu là Int
+                    "community/{id}",
+                    arguments = listOf(navArgument("id") { type = NavType.IntType })
                 ) { backStackEntry ->
-                    // Lấy ID từ đường dẫn
-                    val postId = backStackEntry.arguments?.getInt("postId")
-
-                    if (postId != null) {
-                        PostDetailScreen(
-                            postId = postId,
-                            onBackClick = { navController.popBackStack() } // Xử lý nút Back
-                        )
-                    }
+                    val id = backStackEntry.arguments?.getInt("id") ?: return@composable
+                    CommunityScreen(
+                        communityId = id,
+                        onBackClick = { navController.popBackStack() },
+                        onSearchClick = {
+                            navController.navigate("search?community=$id")
+                        },
+                        onMembershipChange = {
+                            // Đánh dấu cần reload khi quay lại màn hình trước
+                            navController.previousBackStackEntry
+                                ?.savedStateHandle
+                                ?.set("refresh_communities", true)
+                        }
+                    )
                 }
             }
         }

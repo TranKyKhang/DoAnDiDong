@@ -3,7 +3,6 @@ package com.example.appmangxahoi.view.screens
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -11,15 +10,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Block
-import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -32,60 +25,55 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.example.appmangxahoi.controller.CommunityController
+import com.example.appmangxahoi.controller.community
+import com.example.appmangxahoi.controller.post
+import com.example.appmangxahoi.model.CommunityModel
+import com.example.appmangxahoi.model.PostModel
 import com.example.appmangxahoi.model.mockPosts
+import com.example.appmangxahoi.utils.TokenManager
 import com.example.appmangxahoi.view.component.AppPostItem
 import kotlinx.coroutines.launch
-
-// Model đơn giản cho thành viên (Dùng nội bộ trong file này)
-data class Member(val name: String, val role: String, val avatarUrl: String)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CommunityScreen(
-    communityName: String,
+    communityId: Int,
     onBackClick: () -> Unit,
-    onSearchClick: () -> Unit
+    onSearchClick: () -> Unit,
+    onMembershipChange: () -> Unit
 ) {
-    val displayName = remember(communityName) { communityName.replace("_", "/") }
+    val context = LocalContext.current
+    val postController = remember { post() }
+    val communityController = remember { community() }
+
+    var community by remember { mutableStateOf<CommunityModel?>(null) }
+    var posts by remember { mutableStateOf<List<PostModel>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+
     var isJoined by remember { mutableStateOf(false) }
-    var isLoading by remember { mutableStateOf(true) } // Biến để tránh nút nhảy lung tung khi chưa load xong
     var isNotified by remember { mutableStateOf(false) }
 
-    // --- 1. STATE CHO BOTTOM SHEET THÀNH VIÊN ---
-    var showMemberSheet by remember { mutableStateOf(false) }
-    val sheetState = rememberModalBottomSheetState()
-
-    // --- 2. DỮ LIỆU GIẢ THÀNH VIÊN ---
-    val memberList = remember {
-        listOf(
-            Member("Otis Admin", "Admin", "https://picsum.photos/100"),
-            Member("Moderator 1", "Mod", "https://picsum.photos/101"),
-            Member("Moderator 2", "Mod", "https://picsum.photos/102"),
-            Member("Nguyễn Văn A", "Member", "https://picsum.photos/103"),
-            Member("Trần Thị B", "Member", "https://picsum.photos/104"),
-            Member("Lê Văn C", "Member", "https://picsum.photos/105"),
-            Member("User D", "Member", "https://picsum.photos/106"),
-            Member("User E", "Member", "https://picsum.photos/107"),
-        )
-    }
-
-    val communityPosts = remember(displayName) {
-        mockPosts.filter { it.subreddit == displayName }.ifEmpty { mockPosts }
-    }
-
+    val controller = remember { community() }
+    val token = remember { TokenManager.getToken(context) }
     val scope = rememberCoroutineScope()
-    val controller = remember { CommunityController() }
-    val context = LocalContext.current
-    val currentUserId = 6
-    val currentCommunityId = 19
 
-    // --- 1. KIỂM TRA TRẠNG THÁI KHI VỪA MỞ MÀN HÌNH ---
-    LaunchedEffect(Unit) {
-        // Gọi API check xem user 6 đã join community 19 chưa
-        val status = controller.checkIsJoined(currentUserId, currentCommunityId)
+    // ===== LOAD DATA =====
+    LaunchedEffect(communityId) {
+        posts = postController.getCommunityPosts(context, communityId) ?: emptyList()
+        community = communityController.getCommunitybyId(context, communityId)
+        isLoading = false
+        //kiem tra tham gia
+        val status = controller.checkIsJoined(communityId, token.toString())
         isJoined = status
         isLoading = false
+    }
+
+    // ===== LOADING =====
+    if (isLoading) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
     }
 
     Scaffold(
@@ -95,24 +83,24 @@ fun CommunityScreen(
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = null,
+                            tint = Color.White,
                             modifier = Modifier
-                                .background(Color.Black.copy(alpha = 0.4f), CircleShape)
-                                .padding(8.dp),
-                            tint = Color.White
+                                .background(Color.Black.copy(0.4f), CircleShape)
+                                .padding(8.dp)
                         )
                     }
                 },
                 actions = {
                     IconButton(onClick = onSearchClick) {
                         Icon(
-                            imageVector = Icons.Filled.Search,
-                            contentDescription = "Search",
+                            Icons.Filled.Search,
+                            contentDescription = null,
+                            tint = Color.White,
                             modifier = Modifier
-                                .background(Color.Black.copy(alpha = 0.4f), CircleShape)
-                                .padding(8.dp),
-                            tint = Color.White
+                                .background(Color.Black.copy(0.4f), CircleShape)
+                                .padding(8.dp)
                         )
                     }
                 },
@@ -120,49 +108,56 @@ fun CommunityScreen(
             )
         }
     ) { padding ->
+
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color(0xFFF0F0F0)),
             contentPadding = PaddingValues(bottom = padding.calculateBottomPadding())
         ) {
+
+            // ===== HEADER =====
             item {
                 Column(modifier = Modifier.background(Color.White)) {
+
                     Box(modifier = Modifier.height(200.dp)) {
                         AsyncImage(
-                            model = "https://picsum.photos/seed/${communityName}banner/800/400",
-                            contentDescription = "Banner",
+                            model = community?.banner?.let {
+                                "http://10.0.2.2:3000$it"
+                            } ?: "https://picsum.photos/800/400",
+                            contentDescription = null,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(140.dp)
-                                .background(Color.Gray)
                         )
+
                         AsyncImage(
-                            model = "https://ui-avatars.com/api/?name=$communityName&background=random&size=200",
-                            contentDescription = "Avatar",
+                            model = "http://10.0.2.2:3000${community?.icon}"
+                                ?: "https://ui-avatars.com/api/?name=${community?.name}",
+                            contentDescription = null,
                             modifier = Modifier
                                 .padding(start = 16.dp)
                                 .size(80.dp)
                                 .align(Alignment.BottomStart)
                                 .clip(CircleShape)
                                 .border(4.dp, Color.White, CircleShape)
-                                .background(Color.White)
                         )
                     }
 
-                    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                        // Header info (Tên, nút Join...)
+                    Column(modifier = Modifier.padding(16.dp)) {
+
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = displayName,
+                                text = community?.name ?: "Community",
                                 fontSize = 24.sp,
                                 fontWeight = FontWeight.Bold
                             )
+
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 if (isJoined) {
                                     IconButton(onClick = { isNotified = !isNotified }) {
@@ -179,18 +174,20 @@ fun CommunityScreen(
                                         scope.launch {
                                             if (isJoined) {
                                                 // --- RỜI NHÓM ---
-                                                val success = controller.leaveCommunity(currentUserId, currentCommunityId)
+                                                val success = controller.leaveCommunity(context,communityId)
                                                 if (success) {
                                                     isJoined = false // Cập nhật UI thành "Tham gia"
+                                                    onMembershipChange()
                                                     Toast.makeText(context, "Đã rời nhóm", Toast.LENGTH_SHORT).show()
                                                 } else {
                                                     Toast.makeText(context, "Lỗi khi rời nhóm", Toast.LENGTH_SHORT).show()
                                                 }
                                             } else {
                                                 // --- THAM GIA ---
-                                                val success = controller.joinCommunity(currentUserId, currentCommunityId)
+                                                val success = controller.joinCommunity(context,communityId)
                                                 if (success) {
                                                     isJoined = true // Cập nhật UI thành "Đã tham gia"
+                                                    onMembershipChange()
                                                     Toast.makeText(context, "Tham gia thành công!", Toast.LENGTH_SHORT).show()
                                                 } else {
                                                     Toast.makeText(context, "Lỗi khi tham gia", Toast.LENGTH_SHORT).show()
@@ -217,172 +214,30 @@ fun CommunityScreen(
                                 }
                             }
                         }
-                        Text(text = displayName, fontSize = 14.sp, color = Color.Gray)
 
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("1.2m thành viên", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("•", fontSize = 12.sp, color = Color.Gray)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color(0xFF4CAF50)))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("4.5k đang online", fontSize = 12.sp, color = Color.Black)
-                        }
+                        // ===== SLUG =====
+                        Text(
+                            text = "r/${community?.name ?: ""}",
+                            fontSize = 14.sp,
+                            color = Color.Gray
+                        )
 
                         Spacer(modifier = Modifier.height(12.dp))
 
+                        // ===== DESCRIPTION =====
                         Text(
-                            text = "Chào mừng bạn đến với cộng đồng $displayName. Đây là nơi chia sẻ kiến thức, hỏi đáp và thảo luận về mọi chủ đề liên quan!",
+                            text = community?.description
+                                ?: "Chào mừng bạn đến với cộng đồng!",
                             fontSize = 14.sp,
-                            lineHeight = 20.sp,
                             color = Color.DarkGray
                         )
-
-                        // --- NÚT XEM THÀNH VIÊN  ---
-                        Spacer(modifier = Modifier.height(16.dp))
-                        HorizontalDivider(thickness = 0.5.dp, color = Color.LightGray)
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { showMemberSheet = true } // Bấm vào để hiện BottomSheet
-                                .padding(vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Filled.Group, contentDescription = null, tint = Color.Gray)
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                "Xem tất cả thành viên",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium,
-                                modifier = Modifier.weight(1f)
-                            )
-                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = Color.Gray)
-                        }
-                        HorizontalDivider(thickness = 0.5.dp, color = Color.LightGray)
-                        Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
             }
-            items(communityPosts) { post ->
+
+            // ===== POSTS =====
+            items(posts) { post ->
                 AppPostItem(post = post)
-            }
-        }
-    }
-
-    // --- GIAO DIỆN BOTTOM SHEET THÀNH VIÊN ---
-    if (showMemberSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showMemberSheet = false },
-            sheetState = sheetState,
-            containerColor = Color.White
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 32.dp)
-            ) {
-                // Tiêu đề Sheet
-                Text(
-                    "Thành viên (1,234)",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                )
-
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-                // Danh sách thành viên
-                // Danh sách thành viên
-                LazyColumn {
-                    items(memberList) { member ->
-                        // 1. Tạo biến trạng thái để điều khiển menu của TỪNG item
-                        var isMenuExpanded by remember { mutableStateOf(false) }
-
-                        ListItem(
-                            leadingContent = {
-                                AsyncImage(
-                                    model = member.avatarUrl,
-                                    contentDescription = null,
-                                    modifier = Modifier
-                                        .size(40.dp)
-                                        .clip(CircleShape)
-                                        .background(Color.LightGray)
-                                )
-                            },
-                            headlineContent = {
-                                Text(member.name, fontWeight = FontWeight.Bold)
-                            },
-                            supportingContent = {
-                                if (member.role != "Member") {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            imageVector = Icons.Filled.Shield,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(12.dp),
-                                            tint = Color(0xFF0079D3)
-                                        )
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text(member.role, color = Color(0xFF0079D3), fontSize = 12.sp)
-                                    }
-                                }
-                            },
-                            trailingContent = {
-                                // 2. Dùng Box để neo DropdownMenu vào nút 3 chấm
-                                Box {
-                                    IconButton(onClick = { isMenuExpanded = true }) {
-                                        Icon(Icons.Filled.MoreVert, contentDescription = "Tùy chọn")
-                                    }
-
-                                    // 3. Menu hiển thị khi bấm
-                                    DropdownMenu(
-                                        expanded = isMenuExpanded,
-                                        onDismissRequest = { isMenuExpanded = false },
-                                        modifier = Modifier.background(Color.White)
-                                    ) {
-                                        // Nút Kick
-                                        DropdownMenuItem(
-                                            text = { Text("Kick khỏi nhóm", color = Color.Red) },
-                                            leadingIcon = {
-                                                Icon(
-                                                    imageVector = Icons.Default.Block,
-                                                    contentDescription = null,
-                                                    tint = Color.Red
-                                                )
-                                            },
-                                            onClick = {
-                                                isMenuExpanded = false
-                                                // TODO: Gọi API Kick thành viên tại đây
-                                                // controller.kickMember(member.id)
-                                            }
-                                        )
-
-                                        // Nút Nâng cấp (Chỉ hiện nếu chưa phải Admin/Mod)
-                                        if (member.role == "Member") {
-                                            DropdownMenuItem(
-                                                text = { Text("Nâng làm Moderator") },
-                                                leadingIcon = {
-                                                    Icon(
-                                                        imageVector = Icons.Default.Security,
-                                                        contentDescription = null,
-                                                        tint = Color(0xFF0079D3)
-                                                    )
-                                                },
-                                                onClick = {
-                                                    isMenuExpanded = false
-                                                    // TODO: Gọi API Nâng quyền tại đây
-                                                    // controller.promoteMember(member.id)
-                                                }
-                                            )
-                                        }
-                                    }
-                                }
-                            },
-                            colors = ListItemDefaults.colors(containerColor = Color.White)
-                        )
-                    }
-                }
             }
         }
     }

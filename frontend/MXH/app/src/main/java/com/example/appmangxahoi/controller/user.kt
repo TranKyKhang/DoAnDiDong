@@ -1,15 +1,19 @@
 // --- UserController.kt ---
 package com.example.appmangxahoi.controller
 
+import UserModel
 import android.content.Context
 import android.net.Uri
-import com.example.appmangxahoi.model.UserModel
+import com.example.appmangxahoi.model.LoginRequest
+import com.example.appmangxahoi.model.LoginResponse
+import com.example.appmangxahoi.utils.TokenManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.File
 
 class User {
@@ -20,11 +24,15 @@ class User {
     private val json = Json { ignoreUnknownKeys = true }
 
 
-    suspend fun getUserProfile(userId: Int): UserModel? =
+    suspend fun getMyProfile(context: Context): UserModel? =
         withContext(Dispatchers.IO) {
+
+            val token = TokenManager.getToken(context) ?: return@withContext null
+
             try {
                 val request = Request.Builder()
-                    .url("$BASE_URL/api/users/$userId")
+                    .url("$BASE_URL/api/users/profile")
+                    .addHeader("Authorization", "Bearer $token")
                     .get()
                     .build()
 
@@ -40,24 +48,33 @@ class User {
         }
 
 
+
+
     suspend fun updateProfile(
         context: Context,
-        userId: Int,
         displayName: String?,
         bio: String?,
         avatarUri: Uri?,
         bannerUri: Uri?
     ): Boolean = withContext(Dispatchers.IO) {
+
         try {
+            val token = TokenManager.getToken(context)
+                ?: return@withContext false
+
             val bodyBuilder = MultipartBody.Builder()
                 .setType(MultipartBody.FORM)
-                .addFormDataPart("id", userId.toString())
 
-            displayName?.let { bodyBuilder.addFormDataPart("display_name", it) }
-            bio?.let { bodyBuilder.addFormDataPart("bio", it) }
+            displayName?.let {
+                bodyBuilder.addFormDataPart("display_name", it)
+            }
 
-            avatarUri?.let {
-                val file = uriToFile(context, it)
+            bio?.let {
+                bodyBuilder.addFormDataPart("bio", it)
+            }
+
+            avatarUri?.let { uri ->
+                val file = uriToFile(context, uri)
                 bodyBuilder.addFormDataPart(
                     "avatar",
                     file.name,
@@ -65,8 +82,8 @@ class User {
                 )
             }
 
-            bannerUri?.let {
-                val file = uriToFile(context, it)
+            bannerUri?.let { uri ->
+                val file = uriToFile(context, uri)
                 bodyBuilder.addFormDataPart(
                     "banner",
                     file.name,
@@ -75,28 +92,79 @@ class User {
             }
 
             val request = Request.Builder()
-                .url("$BASE_URL/api/users/update-profile")
+                .url("$BASE_URL/api/users/profile-update")
                 .put(bodyBuilder.build())
+                .addHeader("Authorization", "Bearer $token")
                 .build()
 
             client.newCall(request).execute().use { response ->
-                println("updateProfile response code: ${response.code}")
-                return@withContext response.isSuccessful
+                response.isSuccessful
             }
 
         } catch (e: Exception) {
             e.printStackTrace()
-            return@withContext false
+            false
         }
     }
 
-    private fun uriToFile(context: Context, uri: Uri): File {
-        val inputStream = context.contentResolver.openInputStream(uri)
-            ?: throw IllegalArgumentException("Cannot open input stream from URI: $uri")
-        val file = File.createTempFile("upload_", ".jpg", context.cacheDir)
+    // ================= helper =================
+    fun uriToFile(context: Context, uri: Any): File {
+        val realUri = uri as Uri
+
+        val contentResolver = context.contentResolver
+        val mimeType = contentResolver.getType(realUri) // image/png, image/jpeg
+
+        val extension = when (mimeType) {
+            "image/png" -> ".png"
+            "image/jpeg" -> ".jpg"
+            "image/jpg" -> ".jpg"
+            "image/webp" -> ".webp"
+            else -> ""
+        }
+
+        val inputStream = contentResolver.openInputStream(realUri)!!
+        val file = File(
+            context.cacheDir,
+            "upload_${System.currentTimeMillis()}$extension"
+        )
+
         file.outputStream().use { output ->
             inputStream.copyTo(output)
         }
+
         return file
     }
+
+    suspend fun login(
+        email: String,
+        password: String
+    ): LoginResponse? = withContext(Dispatchers.IO) {
+        try {
+            val loginRequest = LoginRequest(email, password)
+
+            val requestBody = json.encodeToString(
+                LoginRequest.serializer(),
+                loginRequest
+            ).toRequestBody("application/json".toMediaType())
+
+            val request = Request.Builder()
+                .url("$BASE_URL/api/users/login")
+                .post(requestBody)
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                val body = response.body?.string() ?: return@withContext null
+
+                return@withContext json.decodeFromString(
+                    LoginResponse.serializer(),
+                    body
+                )
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
 }
+

@@ -1,23 +1,31 @@
 package com.example.appmangxahoi.model
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-
-// Sửa các trường này khớp với JSON API trả về
+@Serializable
+data class CommunityResponse(
+    val success: Boolean? = null,
+    val data: List<CommunityModel>
+)
+@Serializable
+data class DetailCommunityResponse(
+    val message: String,
+    val data: CommunityModel
+)
 @Serializable
 data class CommunityModel(
     val id: Int,
-    val name: String,
-    val description: String?,
-    val icon:String?,
-    val banner:String?,
-    val rules:String?,
-    val member_count: Int,
-    val created_at: String,
-    val user_id:Int
-)
 
-@Serializable
-data class JoinRequest(
-    val user_id: Int,
-    val community_id: Int
+    val name: String,
+
+    val description: String? = null,
+
+    val icon: String? = null,
+
+    val banner: String? = null,
+
+    val rules: String? = null,
+
+    @SerialName("member_count")
+    val memberCount: Int
 )

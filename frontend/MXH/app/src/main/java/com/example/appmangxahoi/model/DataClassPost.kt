@@ -1,55 +1,103 @@
 package com.example.appmangxahoi.model
 
-data class DataClassPost(
-    val id: Int,
-    val subreddit: String,
-    val author: String,
-    val authorAvatarUrl: String, // [MỚI] Link ảnh đại diện
-    val title: String,
-    val imageUrl: String?,
-    val videoUrl: String? = null,
-    val isVideo: Boolean = false,
-    val voteCount: String,
-    val commentCount: String,
-    val timeAgo: String
-)
-
+// Xóa class DataClassPost cũ đi, chúng ta chỉ dùng PostModel duy nhất
+// Dữ liệu giả lập (Mock Data) bây giờ sẽ dùng PostModel chuẩn
 val mockPosts = listOf(
-    DataClassPost(
-        id = 1, subreddit = "r/androiddev", author = "u/dev_master",
-        authorAvatarUrl = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60", // Avatar nam
+    PostModel(
+        id = 1,
+        communityId = 101,
+        communityName = "androiddev", // UI sẽ tự thêm prefix "r/"
+        authorName = "dev_master",    // UI sẽ tự thêm prefix "u/"
+        authorAvatarUrl = "/upload/avatars/user1.jpg", // Giả lập đường dẫn tương đối (hoặc để full link nếu muốn test)
+        userId = 50,
         title = "Jetpack Compose quá tuyệt vời! Giao diện mượt mà.",
-        imageUrl = "https://images.unsplash.com/photo-1607252650355-f7fd0460ccdb?q=80&w=1000&auto=format&fit=crop",
-        voteCount = "1.2k", commentCount = "340", timeAgo = "2h"
+        content = "Tôi vừa chuyển từ XML sang Compose và cảm thấy năng suất tăng gấp đôi. Mọi người nghĩ sao?",
+        // Convert imageUrl cũ thành List images
+        images = listOf("https://images.unsplash.com/photo-1607252650355-f7fd0460ccdb?q=80&w=1000&auto=format&fit=crop"),
+        video = null,
+        upvotes = 1200, // Convert "1.2k" thành số Int
+        downvotes = 50,
+        rating = 1150,
+        commentCount = 340,
+        createdAt = "2h ago", // PostModel hứng String nên để tạm string này
+        _isRemoved = 0,
+        hotScore = 99.5
     ),
-    DataClassPost(
-        id = 2, subreddit = "r/funny", author = "u/joker",
-        authorAvatarUrl = "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&auto=format&fit=crop&q=60", // Avatar nữ
+    PostModel(
+        id = 2,
+        communityId = 102,
+        communityName = "funny",
+        authorName = "joker",
+        authorAvatarUrl = "/upload/avatars/user2.jpg",
+        userId = 51,
         title = "Mèo của tôi đang học code (Thật đấy!)",
-        imageUrl = "https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=1000&auto=format&fit=crop",
-        voteCount = "5.6k", commentCount = "890", timeAgo = "5h"
+        content = "Nó cứ nhảy lên bàn phím mỗi khi tôi debug...",
+        images = listOf("https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=1000&auto=format&fit=crop"),
+        video = null,
+        upvotes = 5600,
+        downvotes = 100,
+        rating = 5500,
+        commentCount = 890,
+        createdAt = "5h ago",
+        _isRemoved = 0,
+        hotScore = 88.0
     ),
-    DataClassPost(
-        id = 3, subreddit = "r/kotlin", author = "u/jetbrains_fan",
-        authorAvatarUrl = "https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=100&auto=format&fit=crop&q=60", // Avatar khác
+    PostModel(
+        id = 3,
+        communityId = 103,
+        communityName = "kotlin",
+        authorName = "jetbrains_fan",
+        authorAvatarUrl = "/upload/avatars/user3.jpg",
+        userId = 52,
         title = "Tại sao nên dùng Kotlin thay vì Java trong năm 2025?",
-        imageUrl = null,
-        voteCount = "890", commentCount = "120", timeAgo = "1d"
+        content = "Null safety, Coroutines, và cú pháp ngắn gọn...",
+        images = emptyList(), // Không có ảnh
+        video = null,
+        upvotes = 890,
+        downvotes = 10,
+        rating = 880,
+        commentCount = 120,
+        createdAt = "1d ago",
+        _isRemoved = 0,
+        hotScore = 45.0
     ),
-    DataClassPost(
-        id = 4, subreddit = "r/vietnam", author = "u/nguoiviet",
-        authorAvatarUrl = "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&auto=format&fit=crop&q=60", // Avatar nam kính
+    PostModel(
+        id = 4,
+        communityId = 104,
+        communityName = "vietnam",
+        authorName = "nguoiviet",
+        authorAvatarUrl = "/upload/avatars/user4.jpg",
+        userId = 53,
         title = "Ảnh chụp Sài Gòn về đêm tuyệt đẹp",
-        imageUrl = "https://images.unsplash.com/photo-1583417319070-4a69db38a482?q=80&w=1000&auto=format&fit=crop",
-        voteCount = "3.4k", commentCount = "560", timeAgo = "3h"
+        content = "Một góc nhìn khác từ Bitexco...",
+        images = listOf("https://images.unsplash.com/photo-1583417319070-4a69db38a482?q=80&w=1000&auto=format&fit=crop"),
+        video = null,
+        upvotes = 3400,
+        downvotes = 200,
+        rating = 3200,
+        commentCount = 560,
+        createdAt = "3h ago",
+        _isRemoved = 0,
+        hotScore = 70.0
     ),
-    DataClassPost(
-        id = 5, subreddit = "r/sports", author = "u/sport_lover",
-        authorAvatarUrl = "https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=100&auto=format&fit=crop&q=60", // Avatar thể thao
+    PostModel(
+        id = 5,
+        communityId = 105,
+        communityName = "sports",
+        authorName = "sport_lover",
+        authorAvatarUrl = "/upload/avatars/user5.jpg",
+        userId = 54,
         title = "[Highlight] Bàn thắng để đời của cầu thủ số 7!",
-        imageUrl = "https://images.unsplash.com/photo-1579952363873-27f3bade8f55?q=80&w=1000&auto=format&fit=crop",
-        isVideo = true,
-        videoUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-        voteCount = "12k", commentCount = "1.5k", timeAgo = "10m"
+        content = "Xem đi xem lại vẫn thấy nổi da gà.",
+        images = listOf("https://images.unsplash.com/photo-1579952363873-27f3bade8f55?q=80&w=1000&auto=format&fit=crop"), // Thumbnail cho video
+        // Trường hợp Video
+        video = "/videos/highlight.mp4", // Giả lập link video
+        upvotes = 12000,
+        downvotes = 500,
+        rating = 11500,
+        commentCount = 1500,
+        createdAt = "10m ago",
+        _isRemoved = 0,
+        hotScore = 150.0
     )
 )

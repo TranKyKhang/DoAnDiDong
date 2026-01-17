@@ -31,19 +31,6 @@ fun CreatePostTopBar(
         title = {
             Text("Tạo bài viết", fontWeight = FontWeight.Bold, fontSize = 18.sp)
         },
-        actions = {
-            // Nút Đăng
-            Button(
-                onClick = onPostClick,
-                enabled = isPostEnabled, // Chỉ bấm được khi có nội dung
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF0079D3), // Màu xanh Reddit
-                    disabledContainerColor = Color.LightGray
-                ),
-                modifier = Modifier.padding(end = 8.dp)
-            ) {
-                Text("Đăng", fontWeight = FontWeight.Bold, color = Color.White)
-            }
-        }
+
     )
 }

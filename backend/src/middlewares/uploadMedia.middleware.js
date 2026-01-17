@@ -9,12 +9,10 @@ const storage = multer.diskStorage({
     } else if (file.fieldname === "video") {
       cb(null, "upload/posts/videos"); 
     }
-    // Xu li icon va banner cho cong dong
     else if (file.fieldname === "icon" ) {
-      cb(null, "upload/communities/icon"); 
-    }
-    else if (file.fieldname === "banner") {
-      cb(null, "upload/communities/banner"); 
+      cb(null, "upload/communities/icons"); 
+    }else if(file.fieldname === "banner"){
+       cb(null, "upload/communities/banners"); 
     }
   },
   filename: (req, file, cb) => {

@@ -2,10 +2,8 @@ import db from "../config/db.js";
 
 export const handleVote = async (req, res) => {
     const { target, id } = req.params;
-    const { userId, type } = req.body;
-
-    console.log("params: ", req.params);
-    console.log("body: ", req.body);
+    const userId = req.user.id;
+    const { type } = req.body;
 
     const tableName = target.toLowerCase() === "post" ? "posts" : "comments";
 
@@ -19,8 +17,6 @@ export const handleVote = async (req, res) => {
 
         let upDelta = 0;
         let downDelta = 0;
-
-        console.log(type == 'upvote');
 
         if (prevVote == type) { // UNDO
             if (type == 'upvote') upDelta = -1;

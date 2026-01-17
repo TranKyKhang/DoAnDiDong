@@ -1,9 +1,10 @@
-const Notification = require('../models/notifications.model');
-const db = require('../config/db');
+import db from "../config/db.js";
 
-exports.createNotification = (req, res) => {
+export const createNotification = (req, res) => {
+    // 1. Lấy dữ liệu từ Body
     const { type, content, recipient_id, sender_id, post_id, comment_id } = req.body;
 
+    // 2. Validate dữ liệu
     if (!type || !content || !recipient_id) {
         return res.status(400).json({
             success: false,
@@ -19,17 +20,17 @@ exports.createNotification = (req, res) => {
         });
     }
 
-    Notification.create({
-        type,
-        content,
-        recipient_id,
-        sender_id,
-        post_id,
-        comment_id
-    }, (err, result) => {
+    // 3. SỬA LỖI: Viết câu lệnh SQL INSERT trực tiếp thay vì gọi Notification.create
+    const sql = `
+        INSERT INTO notifications (type, content, recipient_id, sender_id, post_id, comment_id, created_at) 
+        VALUES (?, ?, ?, ?, ?, ?, NOW())
+    `;
+
+    db.query(sql, [type, content, recipient_id, sender_id, post_id, comment_id], (err, result) => {
         if (err) {
             console.error('Lỗi tạo thông báo:', err);
             
+            // Bắt lỗi khóa ngoại (Foreign Key) nếu user/post không tồn tại
             if (err.code === 'ER_NO_REFERENCED_ROW_2') {
                 return res.status(404).json({
                     success: false,
@@ -55,49 +56,65 @@ exports.createNotification = (req, res) => {
             }
         });
     });
-    
 };
-exports.getNotificationsByUser = (req, res) => {
-    const userId = req.params.userId;
+
+
+export const getNotificationsByUser = async (req, res) => {
+    console.log(">>> VÀO getNotificationsByUser");
+
+    const userId = req.user?.id;
+    console.log("userId =", userId);
 
     if (!userId) {
-        return res.status(400).json({
+        return res.status(401).json({
             success: false,
-            message: "Thiếu User ID"
+            message: "Chưa đăng nhập"
         });
     }
 
-    const checkUserSql = "SELECT id FROM users WHERE id = ?";
-    
-    db.query(checkUserSql, [userId], (err, users) => {
-        if (err) {
-            return res.status(500).json({
-                success: false,
-                message: "Lỗi kiểm tra user",
-                error: err.message
-            });
-        }
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const offset = (page - 1) * limit;
 
-        if (users.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: "Người dùng không tồn tại"
-            });
-        }
+    // 🔥 BỔ SUNG SQL BỊ THIẾU
+    const sql = `
+        SELECT 
+            n.id,
+            n.type,
+            n.content,
+            n.created_at,
+            n.post_id,
+            n.comment_id,
+            u.id AS sender_id,
+            u.username AS sender_name,
+            u.avatar AS sender_avatar
+        FROM notifications n
+        LEFT JOIN users u ON n.sender_id = u.id
+        WHERE n.recipient_id = ?
+        ORDER BY n.created_at DESC
+        LIMIT ? OFFSET ?
+    `;
 
-        Notification.getByUserId(userId, (err, results) => {
-            if (err) {
-                console.error("Lỗi lấy thông báo:", err);
-                return res.status(500).json({
-                    success: false,
-                    error: err.message
-                });
-            }
+    try {
+        console.log(">>> TRƯỚC QUERY");
 
-            return res.status(200).json({
-                success: true,
-                data: results 
-            });
+        const [results] = await db.query(sql, [userId, limit, offset]);
+
+        console.log(">>> SAU QUERY");
+
+        return res.status(200).json({
+            success: true,
+            page,
+            limit,
+            total: results.length,
+            data: results
         });
-    });
+    } catch (err) {
+        console.error("Lỗi lấy thông báo:", err);
+        return res.status(500).json({
+            success: false,
+            message: "Lỗi server",
+            error: err.message
+        });
+    }
 };

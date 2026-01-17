@@ -1,11 +1,17 @@
-const express = require("express");
+import express from "express";
 const router = express.Router();
-const commentController = require("../controllers/comment.controller");
 
-router.get("/post/:id", commentController.getCommentsByPost);
+import { 
+  getCommentsByPost, 
+  createComment 
+} from "../controllers/comment.controller.js";
 
-router.post("/", commentController.createComment);
+import { verifyToken } from "../middlewares/auth.middleware.js";
 
-router.patch("/:id/vote", commentController.voteComment);
+// Lấy comment theo post
+router.get("/post/:id", verifyToken, getCommentsByPost);
 
-module.exports = router;
+// Tạo comment (bắt buộc đăng nhập)
+router.post("/", verifyToken, createComment);
+
+export default router;
