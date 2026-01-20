@@ -29,3 +29,12 @@ data class CommunityModel(
     @SerialName("member_count")
     val memberCount: Int
 )
+
+@Serializable
+data class MemberModel(
+    val id: Int,
+    val username: String,
+    val displayName: String?,
+    val avatar: String?,
+    val role: String, // "admin", "moderator", "member"
+)

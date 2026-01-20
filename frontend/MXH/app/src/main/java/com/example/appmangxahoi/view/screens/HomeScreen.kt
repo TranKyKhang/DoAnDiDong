@@ -117,6 +117,7 @@ fun AppHomeScreen() {
                     currentRoute == "settings" ||
                             currentRoute == "create_group" ||
                             currentRoute?.startsWith("community/") == true ||
+                            currentRoute == "change_password" ||
                             isSearchRoute -> {}
 
                     else -> {
@@ -148,6 +149,7 @@ fun AppHomeScreen() {
                     currentRoute != Screen.Create.route &&
                     currentRoute != "settings" &&
                     currentRoute != "create_group" &&
+                    currentRoute != "change_password" &&
                     !isSearchRoute
                 ) {
                     AppBottomBar(navController)
@@ -244,9 +246,18 @@ fun AppHomeScreen() {
 
                 // ===== SETTINGS =====
                 composable("settings") {
-                    SettingScreen(onBackClick = { navController.popBackStack() })
+                    SettingScreen(
+                        onBackClick = { navController.popBackStack() },
+                        onChangePasswordClick = {navController.navigate("change_password")},
+                        onLogoutClick = {}
+                    )
                 }
-
+                // ===== CHANGE PASSWORD (Thêm mới route này) =====
+                composable("change_password") {
+                    ChangePasswordScreen(
+                        onBackClick = { navController.popBackStack() }
+                    )
+                }
                 // ===== CREATE GROUP =====
                 composable("create_group") {
                     val context = LocalContext.current
@@ -285,12 +296,6 @@ fun AppHomeScreen() {
                         onBackClick = { navController.popBackStack() },
                         onSearchClick = {
                             navController.navigate("search?community=$id")
-                        },
-                        onMembershipChange = {
-                            // Đánh dấu cần reload khi quay lại màn hình trước
-                            navController.previousBackStackEntry
-                                ?.savedStateHandle
-                                ?.set("refresh_communities", true)
                         }
                     )
                 }

@@ -11,6 +11,7 @@ import {leaveCommunity} from '../controllers/community.controller.js';
 import {getCommunityDetails} from '../controllers/community.controller.js';
 import {getPostCommunityByID, searchCommunities} from '../controllers/community.controller.js';
 import {checkIsJoined} from '../controllers/community.controller.js';
+import {getCommunityMembers} from '../controllers/community.controller.js';
 import upload from '../middlewares/uploadMedia.middleware.js';
 import { verifyToken } from '../middlewares/auth.middleware.js';
 const router = express.Router();
@@ -35,6 +36,8 @@ router.post("/check_status", verifyToken, checkIsJoined);
 router.post('/join',verifyToken, joinCommunity);
 // API Rời: POST /api/communities/leave
 router.post('/leave',verifyToken, leaveCommunity);
+//Lay thong tin thanh vien
+router.get("/:communityId/members", verifyToken, getCommunityMembers);
 //Lay thong tin cong dong
 router.get('/details/:id',verifyToken,getCommunityDetails);
 router.get('/posts/:community_id',verifyToken,getPostCommunityByID);

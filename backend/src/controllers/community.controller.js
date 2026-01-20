@@ -416,7 +416,7 @@ export const leaveCommunity = async (req, res) => {
       });
 
     } catch (error) {
-        console.error("Lỗi lấy thông tin danh sách bài viết: ", error);
+        console.log(error);
         return res.status(500).json({ message: "Lỗi Server", error: error.message });
       }
   };
@@ -479,5 +479,49 @@ export const checkIsJoined = async (req, res) => {
     } catch (error) {
         console.error("Lỗi check status:", error);
         return res.status(500).json({ isJoined: false });
+    }
+};
+//Lay danh sach user da tham gia cong dong
+export const getCommunityMembers = async (req, res) => {
+    try {
+        const { communityId } = req.params;
+
+        if (!communityId) {
+            return res.status(400).json({ success: false, message: "Thiếu communityId" });
+        }
+        const sql = `
+            SELECT 
+                u.id, 
+                u.username, 
+                u.display_name, 
+                u.avatar, 
+                uc.role
+            FROM users u
+            JOIN users_communities uc ON u.id = uc.user_id
+            WHERE uc.community_id = 23 AND uc.is_banned = 0
+            ORDER BY 
+                CASE 
+                    WHEN uc.role = 'admin' THEN 1
+                    WHEN uc.role = 'moderator' THEN 2
+                    ELSE 3
+                END
+        `;
+
+        const [members] = await db.query(sql, [communityId]);
+
+        return res.status(200).json({
+            success: true,
+            message: "Lấy danh sách thành viên thành công",
+            count: members.length,
+            data: members
+        });
+
+    } catch (error) {
+        console.error("Lỗi lấy danh sách thành viên:", error);
+        return res.status(500).json({ 
+            success: false, 
+            message: "Lỗi Server", 
+            error: error.message 
+        });
     }
 };

@@ -6,6 +6,7 @@ import android.util.Log
 import com.example.appmangxahoi.model.CommunityModel
 import com.example.appmangxahoi.model.CommunityResponse
 import com.example.appmangxahoi.model.DetailCommunityResponse
+import com.example.appmangxahoi.model.MemberModel
 import com.example.appmangxahoi.model.PostResponse
 import com.example.appmangxahoi.utils.TokenManager
 import com.example.appmangxahoi.view.screens.CreateCommunityData
@@ -207,8 +208,13 @@ class community {
         }
     }
     //Kiem tra tham gia hay chua
-    suspend fun checkIsJoined(communityId: Int, token: String): Boolean =
+    suspend fun checkIsJoined(communityId: Int,context: Context): Boolean =
         withContext(Dispatchers.IO) {
+            val token = TokenManager.getToken(context)
+            if (token == null) {
+                Log.e("API_DEBUG", " Lỗi: Token bị null (Chưa đăng nhập?)")
+                return@withContext false
+            }
             try {
                 // Tạo JSON chỉ chứa community_id
                 val jsonObject = JSONObject()
@@ -319,6 +325,57 @@ class community {
                 Log.e("API_LEAVE", "Lỗi kết nối: ${e.message}")
                 e.printStackTrace()
                 return@withContext false
+            }
+        }
+
+    //Lay danh sach thanh vien theo id
+    suspend fun getMembersByCommunityID(context: Context, communityId: Int): List<MemberModel> =
+        withContext(Dispatchers.IO) {
+            val token = TokenManager.getToken(context)
+            if (token == null) return@withContext emptyList()
+
+            try {
+                // 1. Tạo Request (Dùng GET, không cần Body)
+                val request = Request.Builder()
+                    .url("$BASE_URL/api/communities/$communityId/members")
+                    .addHeader("Authorization", "Bearer $token")
+                    .get() // <--- QUAN TRỌNG: Dùng GET
+                    .build()
+
+                // 2. Gọi lệnh
+                client.newCall(request).execute().use { response ->
+                    if (response.isSuccessful) {
+                        val responseBody = response.body?.string()
+
+                        // 3. Parse JSON
+                        val jsonObject = JSONObject(responseBody ?: "")
+                        val dataArray = jsonObject.getJSONArray("data")
+
+                        val members = mutableListOf<MemberModel>()
+
+                        for (i in 0 until dataArray.length()) {
+                            val item = dataArray.getJSONObject(i)
+                            members.add(
+                                MemberModel(
+                                    id = item.getInt("id"),
+                                    username = item.getString("username"),
+                                    displayName = if (item.has("display_name") && !item.isNull("display_name")) item.getString("display_name") else item.getString("username"),
+                                    avatar = if (item.has("avatar") && !item.isNull("avatar")) item.getString("avatar") else null,
+                                    role = item.getString("role")
+                                )
+                            )
+                        }
+
+                        Log.d("API_GetMembers", "Lấy được ${members.size} thành viên")
+                        return@withContext members
+                    } else {
+                        Log.e("API_GetMembers", "Lỗi: ${response.code}")
+                        return@withContext emptyList()
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("API_GetMembers", "Exception: ${e.message}")
+                return@withContext emptyList()
             }
         }
 
