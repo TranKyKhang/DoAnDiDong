@@ -392,3 +392,47 @@ export const getCommunityPosts = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+
+export const createPost = async (req, res) => {
+    try {
+        const { title, content, community_id, link_url } = req.body;
+        const userId = req.user.id; 
+
+        let videoPath = null;
+        if (req.files?.video) {
+            videoPath = `/upload/posts/videos/${req.files.video[0].filename}`;
+        }
+
+        const postSql = `
+            INSERT INTO posts (title, content, community_id, user_id, link_url, video, rating) 
+            VALUES (?, ?, ?, ?, ?, ?, 0)`;
+        
+        const [postResult] = await db.query(postSql, [
+            title, 
+            content || "", 
+            community_id, 
+            userId, 
+            link_url || null, 
+            videoPath         
+        ]);
+
+        const postId = postResult.insertId;
+
+        if (req.files?.images && req.files.images.length > 0) {
+            const imgValues = req.files.images.map(file => [
+                postId, 
+                `/upload/posts/images/${file.filename}`
+            ]);
+
+            await db.query("INSERT INTO post_images (post_id, image) VALUES ?", [imgValues]);
+        }
+
+        res.status(201).json({
+            success: true,
+            message: "Tạo bài viết thành công",
+        });
+
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+};
