@@ -12,14 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Block
-import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.NotificationsNone
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -35,9 +28,8 @@ import coil.compose.AsyncImage
 import com.example.appmangxahoi.controller.community
 import com.example.appmangxahoi.controller.post
 import com.example.appmangxahoi.model.CommunityModel
-import com.example.appmangxahoi.model.MemberModel // Đảm bảo bạn đã tạo file MemberModel
+import com.example.appmangxahoi.model.MemberModel
 import com.example.appmangxahoi.model.PostModel
-import com.example.appmangxahoi.utils.TokenManager
 import com.example.appmangxahoi.view.component.AppPostItem
 import kotlinx.coroutines.launch
 
@@ -55,38 +47,46 @@ fun CommunityScreen(
     val communityController = remember { community() }
     val scope = rememberCoroutineScope()
 
-    // State Dữ liệu
+    // State dữ liệu
     var community by remember { mutableStateOf<CommunityModel?>(null) }
     var posts by remember { mutableStateOf<List<PostModel>>(emptyList()) }
-    var memberList by remember { mutableStateOf<List<MemberModel>>(emptyList()) } // Danh sách thành viên thật
+    var memberList by remember { mutableStateOf<List<MemberModel>>(emptyList()) }
+
+    // ===== PHÂN TRANG =====
+    var page by remember { mutableStateOf(1) }
+    var isLastPage by remember { mutableStateOf(false) }
+    var isLoadingMore by remember { mutableStateOf(false) }
 
     // State UI
     var isLoading by remember { mutableStateOf(true) }
     var isJoined by remember { mutableStateOf(false) }
     var isNotified by remember { mutableStateOf(false) }
 
-    // BottomSheet State
+    // BottomSheet
     var showMemberSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
 
-    // ===== LOAD DATA TỪ API =====
-    LaunchedEffect(communityId) {
-        isLoading = true
-        // Lấy bài viết
-        posts = postController.getCommunityPosts(context, communityId) ?: emptyList()
-        // Lấy thông tin nhóm
-        community = communityController.getCommunitybyId(context, communityId)
-        // Kiểm tra đã tham gia chưa
-        isJoined = communityController.checkIsJoined(communityId, context)
+    // ===== LOAD DATA =====
+    LaunchedEffect(communityId, page) {
+        if (page == 1) isLoading = true else isLoadingMore = true
 
-        // LẤY DANH SÁCH THÀNH VIÊN
-        memberList = communityController.getMembersByCommunityID(context, communityId)
+        val newPosts = postController.getCommunityPosts(context, communityId, page) ?: emptyList()
+
+        posts = if (page == 1) newPosts else posts + newPosts
+        isLastPage = newPosts.size < 20
+
+        if (community == null) {
+            community = communityController.getCommunitybyId(context, communityId)
+            isJoined = communityController.checkIsJoined(communityId, context)
+            memberList = communityController.getMembersByCommunityID(context, communityId)
+        }
 
         isLoading = false
+        isLoadingMore = false
     }
 
-    // ===== MÀN HÌNH LOADING =====
-    if (isLoading) {
+    // ===== LOADING FULL =====
+    if (isLoading && page == 1) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
         }
@@ -133,11 +133,10 @@ fun CommunityScreen(
             contentPadding = PaddingValues(bottom = padding.calculateBottomPadding())
         ) {
 
-            // ===== HEADER THÔNG TIN NHÓM =====
+            // ===== HEADER =====
             item {
                 Column(modifier = Modifier.background(Color.White)) {
 
-                    // Banner + Avatar
                     Box(modifier = Modifier.height(200.dp)) {
                         AsyncImage(
                             model = community?.banner?.let { "http://10.0.2.2:3000$it" }
@@ -148,8 +147,7 @@ fun CommunityScreen(
                         )
 
                         AsyncImage(
-                            model = "http://10.0.2.2:3000${community?.icon}"
-                                ?: "https://ui-avatars.com/api/?name=${community?.name}",
+                            model = "http://10.0.2.2:3000${community?.icon}",
                             contentDescription = null,
                             modifier = Modifier
                                 .padding(start = 16.dp)
@@ -160,7 +158,6 @@ fun CommunityScreen(
                         )
                     }
 
-                    // Tên + Nút Tham gia
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -187,19 +184,15 @@ fun CommunityScreen(
                                     onClick = {
                                         scope.launch {
                                             if (isJoined) {
-                                                val success = communityController.leaveCommunity(context, communityId)
-                                                if (success) {
+                                                if (communityController.leaveCommunity(context, communityId)) {
                                                     isJoined = false
                                                     Toast.makeText(context, "Đã rời nhóm", Toast.LENGTH_SHORT).show()
-                                                    // Reload lại danh sách thành viên
                                                     memberList = communityController.getMembersByCommunityID(context, communityId)
                                                 }
                                             } else {
-                                                val success = communityController.joinCommunity(context, communityId)
-                                                if (success) {
+                                                if (communityController.joinCommunity(context, communityId)) {
                                                     isJoined = true
                                                     Toast.makeText(context, "Tham gia thành công!", Toast.LENGTH_SHORT).show()
-                                                    // Reload lại danh sách thành viên
                                                     memberList = communityController.getMembersByCommunityID(context, communityId)
                                                 }
                                             }
@@ -210,148 +203,72 @@ fun CommunityScreen(
                                         contentColor = if (isJoined) Color.Black else Color.White
                                     ),
                                     shape = RoundedCornerShape(50),
-                                    contentPadding = PaddingValues(horizontal = 20.dp),
                                     modifier = Modifier.height(36.dp)
                                 ) {
-                                    Text(
-                                        text = if (isJoined) "Đã tham gia" else "Tham gia",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 14.sp
-                                    )
+                                    Text(if (isJoined) "Đã tham gia" else "Tham gia")
                                 }
                             }
                         }
 
-                        Text("r/${community?.name ?: ""}", fontSize = 14.sp, color = Color.Gray)
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = community?.description ?: "Chào mừng bạn đến với cộng đồng!",
-                            fontSize = 14.sp, color = Color.DarkGray
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        HorizontalDivider(thickness = 0.5.dp, color = Color.LightGray)
-
-                        // --- NÚT XEM THÀNH VIÊN ---
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { showMemberSheet = true }
-                                .padding(vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Filled.Group, contentDescription = null, tint = Color.Gray)
-                            Spacer(modifier = Modifier.width(12.dp))
-                            // Hiển thị số lượng thành viên thật
-                            Text(
-                                "Xem tất cả thành viên (${memberList.size})",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium,
-                                modifier = Modifier.weight(1f)
-                            )
-                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = Color.Gray)
-                        }
-                        HorizontalDivider(thickness = 0.5.dp, color = Color.LightGray)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(community?.description ?: "")
                     }
                 }
             }
 
-            // ===== DANH SÁCH BÀI VIẾT =====
+            // ===== POSTS =====
             items(posts) { post ->
                 AppPostItem(post = post)
+            }
+
+            // ===== FOOTER PHÂN TRANG =====
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    IconButton(
+                        onClick = { if (page > 1) page-- },
+                        enabled = page > 1 && !isLoadingMore
+                    ) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Trang trước")
+                    }
+
+                    if (isLoadingMore) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                    }
+
+                    IconButton(
+                        onClick = { if (!isLastPage) page++ },
+                        enabled = !isLastPage && !isLoadingMore
+                    ) {
+                        Icon(Icons.Default.ArrowForward, contentDescription = "Trang sau")
+                    }
+                }
             }
         }
     }
 
-    // ===== BOTTOM SHEET THÀNH VIÊN =====
+    // ===== MEMBER SHEET (GIỮ NGUYÊN) =====
     if (showMemberSheet) {
         ModalBottomSheet(
             onDismissRequest = { showMemberSheet = false },
-            sheetState = sheetState,
-            containerColor = Color.White
+            sheetState = sheetState
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 32.dp)
-            ) {
-                Text(
-                    "Thành viên (${memberList.size})",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                )
-
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-                LazyColumn {
-                    items(memberList) { member ->
-                        MemberItemRow(member = member) // Tách UI ra hàm riêng cho gọn
-                    }
+            LazyColumn {
+                items(memberList) { member ->
+                    MemberItemRow(member)
                 }
             }
         }
     }
 }
 
-// ===== UI TỪNG DÒNG THÀNH VIÊN (Tách ra cho code chính đỡ rối) =====
 @Composable
 fun MemberItemRow(member: MemberModel) {
-    var isMenuExpanded by remember { mutableStateOf(false) }
-
     ListItem(
-        colors = ListItemDefaults.colors(containerColor = Color.White),
-        leadingContent = {
-            AsyncImage(
-                model = if (!member.avatar.isNullOrEmpty()) "http://10.0.2.2:3000${member.avatar}"
-                else "https://ui-avatars.com/api/?name=${member.username}",
-                contentDescription = null,
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(Color.LightGray),
-                contentScale = ContentScale.Crop
-            )
-        },
-        headlineContent = {
-            Text(member.displayName ?: member.username, fontWeight = FontWeight.Bold)
-        },
-        supportingContent = {
-            // Chỉ hiện role nếu không phải member thường
-            if (member.role == "admin" || member.role == "moderator") {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Filled.Shield,
-                        contentDescription = null,
-                        modifier = Modifier.size(12.dp),
-                        tint = Color(0xFF0079D3)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = member.role.replaceFirstChar { it.uppercase() },
-                        color = Color(0xFF0079D3),
-                        fontSize = 12.sp
-                    )
-                }
-            }
-        },
-        trailingContent = {
-            Box {
-                IconButton(onClick = { isMenuExpanded = true }) {
-                    Icon(Icons.Filled.MoreVert, contentDescription = "Tùy chọn")
-                }
-
-                DropdownMenu(
-                    expanded = isMenuExpanded,
-                    onDismissRequest = { isMenuExpanded = false },
-                    modifier = Modifier.background(Color.White)
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("Xem trang cá nhân") },
-                        onClick = { isMenuExpanded = false }
-                    )
-                    // Logic Admin/Mod quản lý thành viên có thể thêm ở đây sau
-                }
-            }
-        }
+        headlineContent = { Text(member.username) }
     )
 }

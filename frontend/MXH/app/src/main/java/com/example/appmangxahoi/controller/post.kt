@@ -28,190 +28,228 @@ class post {
     // 1. Cấu hình JSON (QUAN TRỌNG: Phải để ignoreUnknownKeys = true)
 // Nếu server trả về trường lạ mà không có config này -> Crash ngay lập tức -> Nhảy vào catch
 
-    suspend fun getPopularPosts(context: Context): List<PostModel>? =
+    suspend fun getPopularPosts(
+        context: Context,
+        page: Int,
+        limit: Int = 20
+    ): List<PostModel>? =
         withContext(Dispatchers.IO) {
-            // Log 1: Kiểm tra Token
+
             val token = TokenManager.getToken(context)
             if (token == null) {
-                Log.e("API_DEBUG", " Lỗi: Token bị null (Chưa đăng nhập?)")
+                Log.e("API_DEBUG", "Token bị null")
                 return@withContext null
             }
 
             try {
-                Log.d("API_DEBUG", " Bắt đầu gọi API: $BASE_URL/api/posts/popular")
+                val url = "$BASE_URL/api/posts/popular?page=$page&limit=$limit"
+                Log.d("API_DEBUG", "Gọi API: $url")
 
                 val request = Request.Builder()
-                    .url("$BASE_URL/api/posts/popular")
+                    .url(url)
                     .addHeader("Authorization", "Bearer $token")
                     .get()
                     .build()
 
                 client.newCall(request).execute().use { response ->
-                    // Log 2: Kiểm tra HTTP Code
                     if (!response.isSuccessful) {
-                        Log.e("API_DEBUG", " Lỗi Server: Code ${response.code} - ${response.message}")
+                        Log.e(
+                            "API_DEBUG",
+                            "Lỗi Server: ${response.code} - ${response.message}"
+                        )
                         return@withContext null
                     }
 
                     val body = response.body?.string()
                     if (body == null) {
-                        Log.e("API_DEBUG", " Lỗi: Body rỗng")
+                        Log.e("API_DEBUG", "Body rỗng")
                         return@withContext null
                     }
 
-                    // Log 3: In ra JSON thô mà Server trả về
-                    Log.d("API_DEBUG", " Server trả về JSON: $body")
+                    Log.d("API_DEBUG", "JSON trả về: $body")
 
-                    // Log 4: Thử Parse
-                    val listPosts = json.decodeFromString<PostResponse>(body).data
-                    Log.d("API_DEBUG", " Parse thành công: ${listPosts.size} bài viết")
+                    val listPosts = json
+                        .decodeFromString<PostResponse>(body)
+                        .data
+
+                    Log.d(
+                        "API_DEBUG",
+                        " Page $page: ${listPosts.size} bài"
+                    )
 
                     return@withContext listPosts
                 }
             } catch (e: Exception) {
-                // Log 5: Bắt được "thủ phạm" gây lỗi
-                Log.e("API_DEBUG", " CRASH KHI GỌI API/PARSE JSON: ${e.message}")
-                e.printStackTrace()
-                null
-            }
-        }
-    suspend fun getMyPosts(context: Context): List<PostModel>? =
-        withContext(Dispatchers.IO) {
-
-            val token = TokenManager.getToken(context)
-            if (token == null) {
-                Log.e("API_DEBUG", " Lỗi: Token bị null (Chưa đăng nhập?)")
-                return@withContext null
-            }
-
-            try {
-                Log.d("API_DEBUG", " Bắt đầu gọi API: $BASE_URL/api/posts/my-posts")
-
-                val request = Request.Builder()
-                    .url("$BASE_URL/api/posts/my-posts")
-                    .addHeader("Authorization", "Bearer $token")
-                    .get()
-                    .build()
-
-                client.newCall(request).execute().use { response ->
-
-                    if (!response.isSuccessful) {
-                        Log.e("API_DEBUG", " Lỗi Server: Code ${response.code} - ${response.message}")
-                        return@withContext null
-                    }
-
-                    val body = response.body?.string()
-                    if (body == null) {
-                        Log.e("API_DEBUG", " Lỗi: Body rỗng")
-                        return@withContext null
-                    }
-
-
-                    Log.d("API_DEBUG", " Server trả về JSON: $body")
-
-                    val listPosts = json.decodeFromString<PostResponse>(body).data
-                    Log.d("API_DEBUG", " Parse thành công: ${listPosts.size} bài viết")
-
-                    return@withContext listPosts
-                }
-            } catch (e: Exception) {
-                // Log 5: Bắt được "thủ phạm" gây lỗi
-                Log.e("API_DEBUG", " CRASH KHI GỌI API/PARSE JSON: ${e.message}")
-                e.printStackTrace()
-                null
-            }
-        }
-    suspend fun getFollowedPosts(context: Context): List<PostModel>? =
-        withContext(Dispatchers.IO) {
-            // Log 1: Kiểm tra Token
-            val token = TokenManager.getToken(context)
-            if (token == null) {
-                Log.e("API_DEBUG", " Lỗi: Token bị null (Chưa đăng nhập?)")
-                return@withContext null
-            }
-
-            try {
-                Log.d("API_DEBUG", " Bắt đầu gọi API: $BASE_URL/api/posts/followed")
-
-                val request = Request.Builder()
-                    .url("$BASE_URL/api/posts/followed")
-                    .addHeader("Authorization", "Bearer $token")
-                    .get()
-                    .build()
-
-                client.newCall(request).execute().use { response ->
-                    // Log 2: Kiểm tra HTTP Code
-                    if (!response.isSuccessful) {
-                        Log.e("API_DEBUG", " Lỗi Server: Code ${response.code} - ${response.message}")
-                        return@withContext null
-                    }
-
-                    val body = response.body?.string()
-                    if (body == null) {
-                        Log.e("API_DEBUG", " Lỗi: Body rỗng")
-                        return@withContext null
-                    }
-
-                    // Log 3: In ra JSON thô mà Server trả về
-                    Log.d("API_DEBUG", " Server trả về JSON: $body")
-
-                    // Log 4: Thử Parse
-                    val listPosts = json.decodeFromString<PostResponse>(body).data
-                    Log.d("API_DEBUG", " Parse thành công: ${listPosts.size} bài viết")
-
-                    return@withContext listPosts
-                }
-            } catch (e: Exception) {
-                // Log 5: Bắt được "thủ phạm" gây lỗi
-                Log.e("API_DEBUG", " CRASH KHI GỌI API/PARSE JSON: ${e.message}")
+                Log.e(
+                    "API_DEBUG",
+                    "Crash khi gọi API / parse JSON: ${e.message}"
+                )
                 e.printStackTrace()
                 null
             }
         }
 
-    suspend fun getCommunityPosts(context: Context, id: Int): List<PostModel>? =
+    suspend fun getMyPosts(
+        context: Context,
+        page: Int,
+        limit: Int = 20
+    ): List<PostModel>? =
         withContext(Dispatchers.IO) {
-            // Log 1: Kiểm tra Token
+
             val token = TokenManager.getToken(context)
             if (token == null) {
-                Log.e("API_DEBUG", " Lỗi: Token bị null (Chưa đăng nhập?)")
                 return@withContext null
             }
 
             try {
-                Log.d("API_DEBUG", " Bắt đầu gọi API: $BASE_URL/api/posts/community/${id}")
+                val url = "$BASE_URL/api/posts/my-posts?page=$page&limit=$limit"
+
 
                 val request = Request.Builder()
-                    .url("$BASE_URL/api/posts/community/${id}")
+                    .url(url)
                     .addHeader("Authorization", "Bearer $token")
                     .get()
                     .build()
 
                 client.newCall(request).execute().use { response ->
-                    // Log 2: Kiểm tra HTTP Code
+
                     if (!response.isSuccessful) {
-                        Log.e("API_DEBUG", " Lỗi Server: Code ${response.code} - ${response.message}")
+                        Log.e(
+                            "API_DEBUG",
+                            "ỗi Server: Code ${response.code} - ${response.message}"
+                        )
                         return@withContext null
                     }
 
                     val body = response.body?.string()
                     if (body == null) {
-                        Log.e("API_DEBUG", " Lỗi: Body rỗng")
+
                         return@withContext null
                     }
 
-                    // Log 3: In ra JSON thô mà Server trả về
-                    Log.d("API_DEBUG", " Server trả về JSON: $body")
 
-                    // Log 4: Thử Parse
-                    val listPosts = json.decodeFromString<PostResponse>(body).data
-                    Log.d("API_DEBUG", " Parse thành công: ${listPosts.size} bài viết")
+
+                    val responseObj = json.decodeFromString<PostResponse>(body)
+
+
+
+                    return@withContext responseObj.data
+                }
+            } catch (e: Exception) {
+
+                e.printStackTrace()
+                null
+            }
+        }
+
+    suspend fun getFollowedPosts(
+        context: Context,
+        page: Int
+    ): List<PostModel>? =
+        withContext(Dispatchers.IO) {
+
+            val token = TokenManager.getToken(context)
+            if (token == null) {
+                Log.e("API_DEBUG", "Token bị null (Chưa đăng nhập?)")
+                return@withContext null
+            }
+
+            try {
+                val url = "$BASE_URL/api/posts/followed?page=$page"
+
+
+                val request = Request.Builder()
+                    .url(url)
+                    .addHeader("Authorization", "Bearer $token")
+                    .get()
+                    .build()
+
+                client.newCall(request).execute().use { response ->
+
+                    if (!response.isSuccessful) {
+                        Log.e(
+                            "API_DEBUG",
+                            "Server lỗi: ${response.code} - ${response.message}"
+                        )
+                        return@withContext null
+                    }
+
+                    val body = response.body?.string()
+                    if (body == null) {
+                        Log.e("API_DEBUG", "body rỗng")
+                        return@withContext null
+                    }
+
+                    Log.d("API_DEBUG", "JSON: $body")
+
+                    val listPosts =
+                        json.decodeFromString<PostResponse>(body).data
+
+                    Log.d(
+                        "API_DEBUG",
+                        "Page $page: ${listPosts.size} bài viết"
+                    )
 
                     return@withContext listPosts
                 }
             } catch (e: Exception) {
-                // Log 5: Bắt được "thủ phạm" gây lỗi
-                Log.e("API_DEBUG", " CRASH KHI GỌI API/PARSE JSON: ${e.message}")
+                Log.e(
+                    "API_DEBUG",
+                    " Crash API/Parse: ${e.message}"
+                )
+                e.printStackTrace()
+                null
+            }
+        }
+
+
+    suspend fun getCommunityPosts(
+        context: Context,
+        id: Int,
+        page: Int,
+        limit: Int = 20
+    ): List<PostModel>? =
+        withContext(Dispatchers.IO) {
+
+            val token = TokenManager.getToken(context)
+            if (token == null) {
+                return@withContext null
+            }
+
+            try {
+                val url = "$BASE_URL/api/posts/community/$id?page=$page&limit=$limit"
+
+                Log.d("API_DEBUG", "➡️ Gọi API: $url")
+
+                val request = Request.Builder()
+                    .url(url)
+                    .addHeader("Authorization", "Bearer $token")
+                    .get()
+                    .build()
+
+                client.newCall(request).execute().use { response ->
+
+                    if (!response.isSuccessful) {
+
+                        return@withContext null
+                    }
+
+                    val body = response.body?.string()
+                    if (body == null) {
+                        return@withContext null
+                    }
+
+
+                    val listPosts = json
+                        .decodeFromString<PostResponse>(body)
+                        .data
+
+
+                    return@withContext listPosts
+                }
+
+            } catch (e: Exception) {
+
                 e.printStackTrace()
                 null
             }

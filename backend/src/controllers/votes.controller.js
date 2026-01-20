@@ -1,6 +1,7 @@
 import db from "../config/db.js";
 
 export const handleVote = async (req, res) => {
+    console.log("ok")
     const { target, id } = req.params;
     const userId = req.user.id;
     const { type } = req.body;

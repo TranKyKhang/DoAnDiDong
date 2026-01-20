@@ -17,6 +17,8 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
@@ -49,17 +51,26 @@ fun ProfileScreen(context: Context = LocalContext.current) {
     var loading by remember { mutableStateOf(true) }
     var showEditDialog by remember { mutableStateOf(false) }
 
+    // 🔹 ADD: PAGINATION STATE
+    var page by remember { mutableStateOf(1) }
+    var isLastPage by remember { mutableStateOf(false) }
+
     var name by remember { mutableStateOf("") }
     var bio by remember { mutableStateOf("") }
     var avatarUrl by remember { mutableStateOf("") }
     var coverUrl by remember { mutableStateOf("") }
 
     /* ================= LOAD PROFILE + POSTS ================= */
-    LaunchedEffect(Unit) {
+    LaunchedEffect(page) { // 🔹 ADD: depend page
         loading = true
 
         profile = userController.getMyProfile(context)
-        posts = postController.getMyPosts(context) ?: emptyList()
+
+        val result = postController.getMyPosts(context, page) // 🔹 ADD: page
+        if (result != null) {
+            posts = result
+            isLastPage = result.size < 20
+        }
 
         loading = false
     }
@@ -115,7 +126,9 @@ fun ProfileScreen(context: Context = LocalContext.current) {
     /* ================= UI ================= */
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
-        modifier = Modifier.fillMaxSize().background(Color.White),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White),
         horizontalArrangement = Arrangement.spacedBy(2.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
@@ -170,7 +183,6 @@ fun ProfileScreen(context: Context = LocalContext.current) {
                 )
 
                 Spacer(Modifier.height(12.dp))
-
                 /* ===== POST & COMMENT RATING ===== */
                 Row(
                     modifier = Modifier
@@ -180,9 +192,11 @@ fun ProfileScreen(context: Context = LocalContext.current) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
 
-                    /* POST RATING */
+                    // POST RATING
                     Card(
-                        modifier = Modifier.weight(1f).height(90.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(90.dp),
                         colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
                     ) {
                         Column(
@@ -209,9 +223,11 @@ fun ProfileScreen(context: Context = LocalContext.current) {
                         }
                     }
 
-                    /* COMMENT RATING */
+                    // COMMENT RATING
                     Card(
-                        modifier = Modifier.weight(1f).height(90.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(90.dp),
                         colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
                     ) {
                         Column(
@@ -241,22 +257,52 @@ fun ProfileScreen(context: Context = LocalContext.current) {
 
                 Spacer(Modifier.height(16.dp))
 
-                Text(
-                    text = "Bài viết",
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(16.dp)
-                )
             }
         }
 
+        /* ===== POSTS ===== */
         items(
             items = posts,
             span = { GridItemSpan(3) }
         ) { post ->
-            AppPostItem(post = post, )
+            AppPostItem(post = post)
         }
 
+        /* ===== PAGINATION FOOTER (ADD) ===== */
+        item(span = { GridItemSpan(3) }) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+
+                // PREVIOUS
+                IconButton(
+                    enabled = page > 1 && !loading,
+                    onClick = { page-- }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = "Previous"
+                    )
+                }
+
+
+
+                // NEXT
+                IconButton(
+                    enabled = !isLastPage && !loading,
+                    onClick = { page++ }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowForward,
+                        contentDescription = "Next"
+                    )
+                }
+            }
+        }
     }
 }
 

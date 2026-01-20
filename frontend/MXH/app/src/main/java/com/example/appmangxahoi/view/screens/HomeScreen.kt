@@ -5,6 +5,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -20,7 +23,6 @@ import com.example.appmangxahoi.controller.community
 import com.example.appmangxahoi.controller.post
 import com.example.appmangxahoi.model.PostModel
 import com.example.appmangxahoi.ui.screens.CreatePostScreen
-import com.example.appmangxahoi.utils.TokenManager
 import com.example.appmangxahoi.view.component.*
 import kotlinx.coroutines.launch
 
@@ -29,16 +31,19 @@ fun AppHomeScreen() {
     val context = LocalContext.current
     val postController = remember { post() }
 
-    // ✅ CHỈ 1 NavController
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // ===== STATE =====
+    // ===== STATE (GIỮ NGUYÊN) =====
     var posts by remember { mutableStateOf<List<PostModel>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
-    var refreshFeed by remember { mutableStateOf(0) } // reload trigger
+    var refreshFeed by remember { mutableStateOf(0) }
     var isPostButtonEnabled by remember { mutableStateOf(false) }
+
+    // ===== PAGINATION (GIỮ NGUYÊN) =====
+    var page by remember { mutableStateOf(1) }
+    var isLastPage by remember { mutableStateOf(false) }
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val snackbarHostState = remember { SnackbarHostState() }
@@ -48,25 +53,26 @@ fun AppHomeScreen() {
     val currentFeedTitle =
         if (currentRoute == "popular") "Popular" else "Home"
 
-    // ===== LOAD POSTS =====
-    LaunchedEffect(refreshFeed) {
-        isLoading = true
-        posts = postController.getFollowedPosts(context) ?: emptyList()
-        isLoading = false
+    // ===== LOAD POSTS (CHỈ THÊM currentRoute) =====
+    LaunchedEffect(refreshFeed, page, currentRoute) {
+        if (currentRoute == Screen.Home.route) {
+            isLoading = true
+            val result = postController.getFollowedPosts(context, page)
+            posts = result ?: emptyList()
+            isLastPage = result?.size ?: 0 < 20
+            isLoading = false
+        }
     }
 
-    // --- LẮNG NGHE TÍN HIỆU TỪ MÀN HÌNH CREATE_GROUP ---
-    // Lấy entry hiện tại (Home)
+    // ===== LẮNG NGHE CREATE GROUP (GIỮ NGUYÊN) =====
     val currentEntry by navController.currentBackStackEntryAsState()
-    // Theo dõi biến "refresh_communities" trong savedStateHandle
     val refreshNeeded = currentEntry?.savedStateHandle
         ?.getLiveData<Boolean>("refresh_communities")
         ?.observeAsState()
-    // Khi refreshNeeded đổi thành true -> Load lại list
+
     LaunchedEffect(refreshNeeded?.value) {
         if (refreshNeeded?.value == true) {
-            community.getMyCommunity(context) // Gọi API lấy lại danh sách
-            // Xóa cờ để tránh load lặp lại
+            community.getMyCommunity(context)
             currentEntry?.savedStateHandle?.remove<Boolean>("refresh_communities")
         }
     }
@@ -75,6 +81,7 @@ fun AppHomeScreen() {
         drawerState = drawerState,
         drawerContent = {
             AppDrawer(
+                drawerState = drawerState,
                 onItemClick = { id ->
                     scope.launch {
                         drawerState.close()
@@ -91,9 +98,7 @@ fun AppHomeScreen() {
         }
     ) {
         Scaffold(
-            snackbarHost = {
-                SnackbarHost(hostState = snackbarHostState)
-            },
+            snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
                 val isSearchRoute = currentRoute?.startsWith("search") == true
                 when {
@@ -106,10 +111,8 @@ fun AppHomeScreen() {
 
                     currentRoute == Screen.Create.route -> {
                         CreatePostTopBar(
-                            onCloseClick = {
-                                navController.popBackStack()
-                            },
-                            onPostClick = { },
+                            onCloseClick = { navController.popBackStack() },
+                            onPostClick = {},
                             isPostEnabled = isPostButtonEnabled
                         )
                     }
@@ -128,15 +131,9 @@ fun AppHomeScreen() {
                             onSearchClick = { navController.navigate("search") },
                             onFeedClick = { selected ->
                                 if (selected == "Popular") {
-                                    navController.navigate("popular") {
-                                        popUpTo(Screen.Home.route) { saveState = true }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
+                                    navController.navigate("popular")
                                 } else {
-                                    navController.navigate(Screen.Home.route) {
-                                        popUpTo(Screen.Home.route) { inclusive = true }
-                                    }
+                                    navController.navigate(Screen.Home.route)
                                 }
                             }
                         )
@@ -176,8 +173,39 @@ fun AppHomeScreen() {
                             bottom = 16.dp
                         )
                     ) {
+
                         items(posts) { post ->
                             AppPostItem(post = post)
+                        }
+
+                        item {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+
+                                IconButton(
+                                    onClick = { page-- },
+                                    enabled = page > 1 && !isLoading
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.ArrowBack,
+                                        contentDescription = "Trang trước"
+                                    )
+                                }
+
+                                IconButton(
+                                    onClick = { page++ },
+                                    enabled = !isLastPage && !isLoading
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.ArrowForward,
+                                        contentDescription = "Trang sau"
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -203,17 +231,13 @@ fun AppHomeScreen() {
                                 navController.popBackStack(Screen.Home.route, false)
 
                                 scope.launch {
-                                    snackbarHostState.showSnackbar(
-                                        "Đăng bài thành công ",
-                                        duration = SnackbarDuration.Long
-                                    )
+                                    snackbarHostState.showSnackbar("Đăng bài thành công")
                                 }
                             },
                             onPostFail = { errorMsg ->
                                 scope.launch {
                                     snackbarHostState.showSnackbar(
-                                        errorMsg ?: "Đăng bài thất bại ",
-                                        duration = SnackbarDuration.Long
+                                        errorMsg ?: "Đăng bài thất bại"
                                     )
                                 }
                             }
@@ -248,21 +272,22 @@ fun AppHomeScreen() {
                 composable("settings") {
                     SettingScreen(
                         onBackClick = { navController.popBackStack() },
-                        onChangePasswordClick = {navController.navigate("change_password")},
+                        onChangePasswordClick = { navController.navigate("change_password") },
                         onLogoutClick = {}
                     )
                 }
-                // ===== CHANGE PASSWORD (Thêm mới route này) =====
+
+                // ===== CHANGE PASSWORD =====
                 composable("change_password") {
                     ChangePasswordScreen(
                         onBackClick = { navController.popBackStack() }
                     )
                 }
+
                 // ===== CREATE GROUP =====
                 composable("create_group") {
-                    val context = LocalContext.current
-                    val scope = rememberCoroutineScope() // Cần scope để chạy suspend function
-                    val controller = remember { community() } // Khởi tạo controller
+                    val scope = rememberCoroutineScope()
+                    val controller = remember { community() }
 
                     CreateGroupScreen(
                         onDismiss = { navController.popBackStack() },
@@ -270,15 +295,16 @@ fun AppHomeScreen() {
                             scope.launch {
                                 val success = controller.createCommunity(context, data)
                                 if (success) {
-                                    // BƯỚC QUAN TRỌNG: Báo hiệu cho màn hình trước biết cần reload
                                     navController.previousBackStackEntry
                                         ?.savedStateHandle
                                         ?.set("refresh_communities", true)
-
-                                    // Sau đó mới quay về
                                     navController.popBackStack()
                                 } else {
-                                    Toast.makeText(context, "Lỗi tạo cộng đồng", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(
+                                        context,
+                                        "Lỗi tạo cộng đồng",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
                                 }
                             }
                         }

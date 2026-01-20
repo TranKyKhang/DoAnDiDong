@@ -173,171 +173,217 @@ export const updatePost = async (req, res) => {
 
 export const getFollowedFeed = async (req, res) => {
   const userId = req.user.id;
-  const limit = parseInt(req.query.limit) || 20;
-  const offset = (parseInt(req.query.page) - 1) * limit || 0;
+
+  // 🔹 Phân trang giống Popular
+  const page = parseInt(req.query.page) || 1;
+  const limit = 20;
+  const offset = (page - 1) * limit;
 
   try {
     const [rows] = await db.query(
-      `SELECT 
-                p.*,
-                COALESCE(
-                  (SELECT JSON_ARRAYAGG(m.image) -- Đổi JSON_AGG thành JSON_ARRAYAGG
-                  FROM post_images m 
-                  WHERE m.post_id = p.id), 
-                  JSON_ARRAY()
-                ) AS images,
-                c.name AS community_name,
-                u.username AS author_name,
-                u.avatar AS authorAvatarUrl,
-                v.type AS user_vote_status
-            FROM posts p
-            INNER JOIN users_communities f ON p.community_id = f.community_id
-            INNER JOIN communities c ON p.community_id = c.id
-            INNER JOIN users u ON p.user_id = u.id
-            LEFT JOIN votes v ON v.post_id = p.id 
-                AND v.target = '"post"' 
-                AND v.user_id = ?
-            WHERE f.user_id = ? AND p.is_removed = 0
-            ORDER BY p.created_at DESC
-            LIMIT ? OFFSET ?;`,
+      `
+      SELECT 
+        p.*,
+        COALESCE(
+          (
+            SELECT JSON_ARRAYAGG(m.image)
+            FROM post_images m 
+            WHERE m.post_id = p.id
+          ),
+          JSON_ARRAY()
+        ) AS images,
+        c.name AS community_name,
+        u.username AS author_name,
+        u.avatar AS authorAvatarUrl,
+        v.type AS user_vote_status
+      FROM posts p
+      INNER JOIN users_communities f 
+        ON p.community_id = f.community_id
+      INNER JOIN communities c 
+        ON p.community_id = c.id
+      INNER JOIN users u 
+        ON p.user_id = u.id
+      LEFT JOIN votes v 
+        ON v.post_id = p.id 
+        AND v.target = '"post"' 
+        AND v.user_id = ?
+      WHERE 
+        f.user_id = ?
+        AND p.is_removed = 0
+      ORDER BY p.created_at DESC
+      LIMIT ? OFFSET ?;
+      `,
       [userId, userId, limit, offset]
     );
 
     res.json({
       success: true,
+      page,
+      limit,
       data: rows
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
   }
 };
+
 
 export const getPopularPosts = async (req, res) => {
   const userId = req.user.id;
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 20;
+  const offset = (page - 1) * limit;
 
   try {
-    console.log("ok")
     const [rows] = await db.query(
-      `SELECT 
-    p.*,
-    COALESCE(
-        (SELECT JSON_ARRAYAGG(m.image) -- Đổi JSON_AGG thành JSON_ARRAYAGG
-         FROM post_images m 
-         WHERE m.post_id = p.id), 
-        JSON_ARRAY()
-    ) AS images,
-    c.name AS community_name,
-    u.username AS author_name,
-    u.avatar AS authorAvatarUrl,
-    v.type AS user_vote_status,
-    ((cast(p.upvotes as signed) - cast(p.downvotes as signed)) / 
-    POWER(TIMESTAMPDIFF(MINUTE, p.created_at, CURRENT_TIMESTAMP)/3600 + 2, 1.5)) AS hot_score
-FROM posts p
-INNER JOIN communities c ON p.community_id = c.id
-INNER JOIN users u ON p.user_id = u.id
-LEFT JOIN votes v ON v.post_id = p.id 
-    AND v.target = '"post"' 
-    AND v.user_id = ?
-WHERE p.is_removed = 0
-ORDER BY hot_score DESC
-LIMIT 20;`,
-      [userId]
+      `
+      SELECT 
+        p.*,
+        COALESCE(
+          (SELECT JSON_ARRAYAGG(m.image)
+           FROM post_images m 
+           WHERE m.post_id = p.id),
+          JSON_ARRAY()
+        ) AS images,
+        c.name AS community_name,
+        u.username AS author_name,
+        u.avatar AS authorAvatarUrl,
+        v.type AS user_vote_status,
+        (
+          (CAST(p.upvotes AS SIGNED) - CAST(p.downvotes AS SIGNED)) /
+          POWER(TIMESTAMPDIFF(MINUTE, p.created_at, CURRENT_TIMESTAMP) / 3600 + 2, 1.5)
+        ) AS hot_score
+      FROM posts p
+      INNER JOIN communities c ON p.community_id = c.id
+      INNER JOIN users u ON p.user_id = u.id
+      LEFT JOIN votes v ON v.post_id = p.id 
+        AND v.target = 'post' 
+        AND v.user_id = ?
+      WHERE p.is_removed = 0
+      ORDER BY hot_score DESC
+      LIMIT ? OFFSET ?
+      `,
+      [userId, limit, offset]
     );
-
-
+    
     res.json({
       success: true,
+      page,
+      limit,
       data: rows
     });
+    
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
 
+
 export const getUserPost = async (req, res) => {
-  const  userId  = req.user.id;
-  const limit = parseInt(req.query.limit) || 20;
-  const offset = (parseInt(req.query.page) - 1) * limit || 0;
+  const userId = req.user.id;
+
+  const page = Math.max(parseInt(req.query.page) || 1, 1);
+  const limit = Math.max(parseInt(req.query.limit) || 20, 1);
+  const offset = (page - 1) * limit;
 
   try {
     const [rows] = await db.query(
-      `SELECT 
-    p.*,
+      `
+      SELECT 
+          p.*,
 
-    COALESCE(
-        (
-            SELECT JSON_ARRAYAGG(m.image)
-            FROM post_images m
-            WHERE m.post_id = p.id
-        ),
-        JSON_ARRAY()
-    ) AS images,
+          COALESCE(
+              (
+                  SELECT JSON_ARRAYAGG(m.image)
+                  FROM post_images m
+                  WHERE m.post_id = p.id
+              ),
+              JSON_ARRAY()
+          ) AS images,
 
-    c.name AS community_name,
-    u.username AS author_name,
-    u.avatar AS authorAvatarUrl,
-    v.type AS user_vote_status
+          c.name AS community_name,
+          u.username AS author_name,
+          u.avatar AS authorAvatarUrl,
+          v.type AS user_vote_status
 
-FROM posts p
-INNER JOIN communities c ON p.community_id = c.id
-INNER JOIN users u ON p.user_id = u.id
-LEFT JOIN votes v 
-    ON v.post_id = p.id
-    AND v.target = '"post"'
-    AND v.user_id = ?   -- userId từ token
+      FROM posts p
+      INNER JOIN communities c ON p.community_id = c.id
+      INNER JOIN users u ON p.user_id = u.id
+      LEFT JOIN votes v 
+          ON v.post_id = p.id
+          AND v.target = '"post"'
+          AND v.user_id = ?
 
-WHERE p.user_id = ?
-  AND p.is_removed = 0
+      WHERE p.user_id = ?
+        AND p.is_removed = 0
 
-ORDER BY p.created_at DESC
-LIMIT ? OFFSET ?;
-`,
+      ORDER BY p.created_at DESC
+      LIMIT ? OFFSET ?;
+      `,
       [userId, userId, limit, offset]
     );
 
     res.json({
       success: true,
-      data: rows
+      data: rows,
+      pagination: {
+        page,
+        limit,
+        hasMore: rows.length === limit
+      }
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
   }
 };
+
 
 export const getCommunityPosts = async (req, res) => {
   const userId = req.user.id;
   const { id } = req.params;
-  const limit = parseInt(req.query.limit) || 20;
-  const offset = (parseInt(req.query.page) - 1) * limit || 0;
+
+  const page = Math.max(parseInt(req.query.page) || 1, 1);
+  const limit = Math.max(parseInt(req.query.limit) || 20, 1);
+  const offset = (page - 1) * limit;
 
   try {
     const [rows] = await db.query(
       `SELECT 
-                p.*,
-                COALESCE(
-                    (
-                        SELECT JSON_ARRAYAGG(m.image)
-                        FROM post_images m
-                        WHERE m.post_id = p.id
-                    ),
-                    JSON_ARRAY()
-                ) AS images,
-                c.name AS community_name,
-                u.username AS author_name,
-                u.avatar AS authorAvatarUrl,
-                v.type AS user_vote_status
-            FROM posts p
-            INNER JOIN communities c ON p.community_id = c.id
-            INNER JOIN users u ON p.user_id = u.id
-            LEFT JOIN votes v ON v.post_id = p.id 
-                AND v.target = '"post"' 
-                AND v.user_id = ?
-            WHERE p.community_id = ? AND p.is_removed = 0
-            ORDER BY p.created_at DESC
-            LIMIT ? OFFSET ?;`,
+          p.*,
+          COALESCE(
+              (
+                  SELECT JSON_ARRAYAGG(m.image)
+                  FROM post_images m
+                  WHERE m.post_id = p.id
+              ),
+              JSON_ARRAY()
+          ) AS images,
+          c.name AS community_name,
+          u.username AS author_name,
+          u.avatar AS authorAvatarUrl,
+          v.type AS user_vote_status
+      FROM posts p
+      INNER JOIN communities c ON p.community_id = c.id
+      INNER JOIN users u ON p.user_id = u.id
+      LEFT JOIN votes v 
+          ON v.post_id = p.id 
+          AND v.target = 'post' 
+          AND v.user_id = ?
+      WHERE p.community_id = ? 
+        AND p.is_removed = 0
+      ORDER BY p.created_at DESC
+      LIMIT ? OFFSET ?;`,
       [userId, id, limit, offset]
     );
-    console.log(rows);
+
+    console.log(`Community ${id} - page ${page} - ${rows.length} posts`);
+
     res.json({
       success: true,
       data: rows
@@ -345,48 +391,4 @@ export const getCommunityPosts = async (req, res) => {
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
-};
-
-export const createPost = async (req, res) => {
-    try {
-        const { title, content, community_id, link_url } = req.body;
-        const userId = req.user.id; 
-
-        let videoPath = null;
-        if (req.files?.video) {
-            videoPath = `/upload/posts/videos/${req.files.video[0].filename}`;
-        }
-
-        const postSql = `
-            INSERT INTO posts (title, content, community_id, user_id, link_url, video, rating) 
-            VALUES (?, ?, ?, ?, ?, ?, 0)`;
-        
-        const [postResult] = await db.query(postSql, [
-            title, 
-            content || "", 
-            community_id, 
-            userId, 
-            link_url || null, 
-            videoPath         
-        ]);
-
-        const postId = postResult.insertId;
-
-        if (req.files?.images && req.files.images.length > 0) {
-            const imgValues = req.files.images.map(file => [
-                postId, 
-                `/upload/posts/images/${file.filename}`
-            ]);
-
-            await db.query("INSERT INTO post_images (post_id, image) VALUES ?", [imgValues]);
-        }
-
-        res.status(201).json({
-            success: true,
-            message: "Tạo bài viết thành công",
-        });
-
-    } catch (err) {
-        res.status(500).json({ success: false, message: err.message });
-    }
 };
