@@ -11,7 +11,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -42,36 +41,31 @@ fun CommunityScreen(
 ) {
     val context = LocalContext.current
 
-    // Controller
     val postController = remember { post() }
     val communityController = remember { community() }
     val scope = rememberCoroutineScope()
 
-    // State dữ liệu
     var community by remember { mutableStateOf<CommunityModel?>(null) }
     var posts by remember { mutableStateOf<List<PostModel>>(emptyList()) }
     var memberList by remember { mutableStateOf<List<MemberModel>>(emptyList()) }
 
-    // ===== PHÂN TRANG =====
     var page by remember { mutableStateOf(1) }
     var isLastPage by remember { mutableStateOf(false) }
     var isLoadingMore by remember { mutableStateOf(false) }
 
-    // State UI
     var isLoading by remember { mutableStateOf(true) }
     var isJoined by remember { mutableStateOf(false) }
     var isNotified by remember { mutableStateOf(false) }
 
-    // BottomSheet
-    var showMemberSheet by remember { mutableStateOf(false) }
+    var selectedTab by remember { mutableStateOf(0) }
+
+    var showMemberSheet by remember { mutableStateOf(true) }
     val sheetState = rememberModalBottomSheetState()
 
-    // ===== LOAD DATA =====
     LaunchedEffect(communityId, page) {
         if (page == 1) isLoading = true else isLoadingMore = true
 
         val newPosts = postController.getCommunityPosts(context, communityId, page) ?: emptyList()
-
         posts = if (page == 1) newPosts else posts + newPosts
         isLastPage = newPosts.size < 20
 
@@ -85,7 +79,6 @@ fun CommunityScreen(
         isLoadingMore = false
     }
 
-    // ===== LOADING FULL =====
     if (isLoading && page == 1) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
@@ -133,7 +126,6 @@ fun CommunityScreen(
             contentPadding = PaddingValues(bottom = padding.calculateBottomPadding())
         ) {
 
-            // ===== HEADER =====
             item {
                 Column(modifier = Modifier.background(Color.White)) {
 
@@ -159,6 +151,7 @@ fun CommunityScreen(
                     }
 
                     Column(modifier = Modifier.padding(16.dp)) {
+
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -174,7 +167,10 @@ fun CommunityScreen(
                                 if (isJoined) {
                                     IconButton(onClick = { isNotified = !isNotified }) {
                                         Icon(
-                                            imageVector = if (isNotified) Icons.Filled.Notifications else Icons.Filled.NotificationsNone,
+                                            imageVector = if (isNotified)
+                                                Icons.Filled.Notifications
+                                            else
+                                                Icons.Filled.NotificationsNone,
                                             contentDescription = null,
                                             tint = Color.Gray
                                         )
@@ -212,46 +208,37 @@ fun CommunityScreen(
 
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(community?.description ?: "")
+
+                        TabRow(selectedTabIndex = selectedTab) {
+                            Tab(
+                                selected = selectedTab == 0,
+                                onClick = { selectedTab = 0 },
+                                text = { Text("Bài viết") }
+                            )
+                            Tab(
+                                selected = selectedTab == 1,
+                                onClick = { selectedTab = 1 },
+                                text = { Text("Thành viên (${memberList.size})") }
+                            )
+                        }
                     }
                 }
             }
 
-            // ===== POSTS =====
-            items(posts) { post ->
-                AppPostItem(post = post)
+            if (selectedTab == 0) {
+                items(posts) { post ->
+                    AppPostItem(post = post)
+                }
             }
 
-            // ===== FOOTER PHÂN TRANG =====
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    IconButton(
-                        onClick = { if (page > 1) page-- },
-                        enabled = page > 1 && !isLoadingMore
-                    ) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Trang trước")
-                    }
-
-                    if (isLoadingMore) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                    }
-
-                    IconButton(
-                        onClick = { if (!isLastPage) page++ },
-                        enabled = !isLastPage && !isLoadingMore
-                    ) {
-                        Icon(Icons.Default.ArrowForward, contentDescription = "Trang sau")
-                    }
+            if (selectedTab == 1) {
+                items(memberList) { member ->
+                    MemberItemRow(member)
                 }
             }
         }
     }
 
-    // ===== MEMBER SHEET (GIỮ NGUYÊN) =====
     if (showMemberSheet) {
         ModalBottomSheet(
             onDismissRequest = { showMemberSheet = false },
@@ -269,6 +256,33 @@ fun CommunityScreen(
 @Composable
 fun MemberItemRow(member: MemberModel) {
     ListItem(
-        headlineContent = { Text(member.username) }
+        leadingContent = {
+            AsyncImage(
+                model = member.avatar?.let { "http://10.0.2.2:3000$it" }
+                    ?: "https://ui-avatars.com/api/?name=${member.username}",
+                contentDescription = null,
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+            )
+        },
+        headlineContent = {
+            Text(member.displayName ?: member.username)
+        },
+        supportingContent = {
+            Text(
+                text = when (member.role) {
+                    "admin" -> "admin"
+                    "moderate", "moderator" -> "moderate"
+                    else -> "member"
+                },
+                fontSize = 12.sp,
+                color = when (member.role) {
+                    "admin" -> Color.Red
+                    "moderate", "moderator" -> Color(0xFF0079D3)
+                    else -> Color.Gray
+                }
+            )
+        }
     )
 }

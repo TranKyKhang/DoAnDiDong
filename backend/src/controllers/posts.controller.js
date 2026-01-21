@@ -174,7 +174,7 @@ export const updatePost = async (req, res) => {
 export const getFollowedFeed = async (req, res) => {
   const userId = req.user.id;
 
-  // 🔹 Phân trang giống Popular
+
   const page = parseInt(req.query.page) || 1;
   const limit = 20;
   const offset = (page - 1) * limit;
