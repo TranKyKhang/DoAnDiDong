@@ -219,7 +219,7 @@ class post {
             try {
                 val url = "$BASE_URL/api/posts/community/$id?page=$page&limit=$limit"
 
-                Log.d("API_DEBUG", "➡️ Gọi API: $url")
+                Log.d("API_DEBUG", " Gọi API: $url")
 
                 val request = Request.Builder()
                     .url(url)

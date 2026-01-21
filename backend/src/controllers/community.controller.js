@@ -120,7 +120,9 @@ export const unBanUser = async (req, res) => {
 
 
 export const changeRole = async (req, res) => {
+    console.log("ok")
   try {
+    
     const { communityId } = req.params;
     const { targetUserId, role } = req.body;
     const currentUserId = req.user.id; 
@@ -200,7 +202,7 @@ export const changeRole = async (req, res) => {
        WHERE community_id = ? AND user_id = ?`,
       [role, communityId, targetUserId]
     );
-
+    console.log("update ok")  
     res.json({
       success: true,
       message: `Đã cập nhật role thành ${role}`

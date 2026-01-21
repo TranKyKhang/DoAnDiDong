@@ -379,5 +379,55 @@ class community {
             }
         }
 
+    suspend fun changeMemberRole(
+        context: Context,
+        communityId: Int,
+        targetUserId: Int,
+        role: String
+    ): Boolean = withContext(Dispatchers.IO) {
+
+        val token = TokenManager.getToken(context)
+        if (token == null) {
+            Log.e("API_CHANGE_ROLE", "Token null")
+            return@withContext false
+        }
+
+        try {
+            // Body gửi đúng với backend
+            val jsonObject = JSONObject()
+            jsonObject.put("targetUserId", targetUserId)
+            jsonObject.put("role", role)
+
+            val mediaType = "application/json; charset=utf-8".toMediaTypeOrNull()
+            val requestBody = jsonObject.toString().toRequestBody(mediaType)
+
+            val request = Request.Builder()
+                .url("$BASE_URL/api/communities/$communityId/change-role")
+                .addHeader("Authorization", "Bearer $token")
+                .put(requestBody)
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                val responseBody = response.body?.string()
+
+                if (response.isSuccessful) {
+                    Log.d("API_CHANGE_ROLE", "Đổi role thành công: $responseBody")
+                    return@withContext true
+                } else {
+                    Log.e(
+                        "API_CHANGE_ROLE",
+                        "Lỗi ${response.code}: $responseBody"
+                    )
+                    return@withContext false
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("API_CHANGE_ROLE", "Exception: ${e.message}")
+            e.printStackTrace()
+            return@withContext false
+        }
+    }
+
+
 }
 
