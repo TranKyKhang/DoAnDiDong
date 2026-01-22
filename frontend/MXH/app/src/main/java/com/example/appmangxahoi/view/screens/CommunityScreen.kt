@@ -12,16 +12,20 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -285,6 +289,39 @@ fun CommunityScreen(
                                         communityController.getMembersByCommunityID(context, communityId)
                                 }
                             }
+                        },
+                        onBanClick = { memberId, isBannedNow ->
+                            scope.launch {
+                                // Xác định trạng thái mới:
+                                // Nếu đang là 1 (Banned) -> Muốn thành 0 (Unban)
+                                // Nếu đang là 0 (Normal) -> Muốn thành 1 (Ban)
+                                val newStatus = if (isBannedNow == 1) 0 else 1
+
+                                val success = if (newStatus == 1) {
+                                    communityController.banUser(context, communityId, memberId)
+                                } else {
+                                    communityController.unBanUser(context, communityId, memberId)
+                                }
+
+                                // QUAN TRỌNG: Nếu API báo thành công -> Sửa luôn list trong máy
+                                if (success) {
+                                    // Dùng hàm .map để tạo ra một danh sách mới,
+                                    // tìm đúng người đó và thay đổi trạng thái isBanned
+                                    memberList = memberList.map { member ->
+                                        if (member.id == memberId) {
+                                            // Copy member cũ nhưng đổi isBanned thành giá trị mới
+                                            member.copy(isBanned = newStatus)
+                                        } else {
+                                            member
+                                        }
+                                    }
+
+                                    val msg = if (newStatus == 1) "Đã cấm thành công" else "Đã gỡ cấm"
+                                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Toast.makeText(context, "Lỗi kết nối", Toast.LENGTH_SHORT).show()
+                                }
+                            }
                         }
                     )
                 }
@@ -301,11 +338,18 @@ fun MemberItemRow(
     member: MemberModel,
     currentUserId: Int,
     currentUserRole: String,
-    onChangeRole: (Int, String) -> Unit
+    onChangeRole: (Int, String) -> Unit,
+    onBanClick: (Int, Int) -> Unit
 ) {
     val context = LocalContext.current
     var expanded by remember { mutableStateOf(false) }
     var selectedRole by remember { mutableStateOf(member.role) }
+
+    // Biến để hiện hộp thoại xác nhận
+    var showBanDialog by remember { mutableStateOf(false) }
+
+    // Kiểm tra trạng thái Ban
+    val isBanned = member.isBanned == 1
 
     val canInteract = when {
         currentUserId == member.id -> false
@@ -315,41 +359,54 @@ fun MemberItemRow(
     }
 
     val roles = when {
-        currentUserRole == "admin" && member.role == "member" ->
-            listOf("member", "moderator")
-
-        currentUserRole == "admin" && member.role == "moderator" ->
-            listOf("moderator", "member")
-
-        currentUserRole == "moderator" && member.role == "member" ->
-            listOf("member", "moderator")
-
+        currentUserRole == "admin" && member.role == "member" -> listOf("member", "moderator")
+        currentUserRole == "admin" && member.role == "moderator" -> listOf("moderator", "member")
+        currentUserRole == "moderator" && member.role == "member" -> listOf("member", "moderator")
         else -> listOf(member.role)
     }
 
-    ListItem(
-        modifier = if (!canInteract) {
-            Modifier.clickable {
-                Toast.makeText(
-                    context,
-                    "Bạn không có quyền thay đổi role",
-                    Toast.LENGTH_SHORT
-                ).show()
+    // Hộp thoại xác nhận
+    if (showBanDialog) {
+        AlertDialog(
+            onDismissRequest = { showBanDialog = false },
+            title = { Text(if (isBanned) "Gỡ cấm (Unban)" else "Cấm thành viên (Ban)") },
+            text = { Text("Bạn có chắc chắn muốn thực hiện với ${member.displayName}?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showBanDialog = false
+                    onBanClick(member.id, member.isBanned) // Gọi hàm xử lý
+                }) {
+                    Text("Đồng ý", color = Color.Red)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBanDialog = false }) { Text("Hủy") }
             }
+        )
+    }
+
+    ListItem(
+        // Làm mờ nếu người dùng bị ban
+        modifier = if (!canInteract) {
+            Modifier.clickable { Toast.makeText(context, "Không có quyền thao tác", Toast.LENGTH_SHORT).show() }
         } else {
             Modifier
-        },
+        }.alpha(if (isBanned) 0.5f else 1f),
+
         leadingContent = {
             AsyncImage(
                 model = member.avatar?.let { "http://10.0.2.2:3000$it" },
                 contentDescription = null,
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
+                modifier = Modifier.size(40.dp).clip(CircleShape)
             )
         },
         headlineContent = {
-            Text(member.displayName ?: member.username)
+            Text(
+                text = member.displayName ?: member.username,
+                // Gạch ngang tên nếu bị ban
+                textDecoration = if (isBanned) TextDecoration.LineThrough else null,
+                color = if (isBanned) Color.Red else Color.Unspecified
+            )
         },
         supportingContent = {
             if (!canInteract) {
@@ -363,12 +420,9 @@ fun MemberItemRow(
                         value = selectedRole,
                         onValueChange = {},
                         readOnly = true,
-                        trailingIcon = {
-                            ExposedDropdownMenuDefaults.TrailingIcon(expanded)
-                        },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
                         modifier = Modifier.menuAnchor()
                     )
-
                     ExposedDropdownMenu(
                         expanded = expanded,
                         onDismissRequest = { expanded = false }
@@ -385,6 +439,20 @@ fun MemberItemRow(
                                 }
                             )
                         }
+                    }
+                }
+            }
+        },
+        // Nút Ban
+        trailingContent = {
+            if (canInteract) {
+                IconButton(onClick = { showBanDialog = true }) {
+                    if (isBanned) {
+                        // Icon Gỡ Ban (Màu xanh)
+                        Icon(Icons.Default.Refresh, contentDescription = "Unban", tint = Color.Blue)
+                    } else {
+                        // Icon Ban (Thùng rác đỏ)
+                        Icon(Icons.Default.Delete, contentDescription = "Ban", tint = Color.Red)
                     }
                 }
             }

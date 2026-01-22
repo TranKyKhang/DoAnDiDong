@@ -427,7 +427,75 @@ class community {
             return@withContext false
         }
     }
+    // Hàm Ban User
+    suspend fun banUser(context: Context, communityId: Int, userId: Int): Boolean =
+        withContext(Dispatchers.IO) {
+            val token = TokenManager.getToken(context)
+            if (token == null) return@withContext false
 
+            try {
+                // Backend cần userId trong body
+                val jsonObject = JSONObject()
+                jsonObject.put("userId", userId)
+
+                val mediaType = "application/json; charset=utf-8".toMediaTypeOrNull()
+                val requestBody = jsonObject.toString().toRequestBody(mediaType)
+
+
+                val request = Request.Builder()
+                    .url("$BASE_URL/api/communities/$communityId/ban")
+                    .addHeader("Authorization", "Bearer $token")
+                    .put(requestBody)
+                    .build()
+
+                client.newCall(request).execute().use { response ->
+                    if (response.isSuccessful) {
+                        Log.d("API_BAN", "Ban thành công")
+                        return@withContext true
+                    } else {
+                        Log.e("API_BAN", "Lỗi: ${response.code} - ${response.body?.string()}")
+                        return@withContext false
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                return@withContext false
+            }
+        }
+
+    // Hàm Unban User
+    suspend fun unBanUser(context: Context, communityId: Int, userId: Int): Boolean =
+        withContext(Dispatchers.IO) {
+            val token = TokenManager.getToken(context)
+            if (token == null) return@withContext false
+
+            try {
+                val jsonObject = JSONObject()
+                jsonObject.put("userId", userId)
+
+                val mediaType = "application/json; charset=utf-8".toMediaTypeOrNull()
+                val requestBody = jsonObject.toString().toRequestBody(mediaType)
+
+                val request = Request.Builder()
+                    .url("$BASE_URL/api/communities/$communityId/unBan")
+                    .addHeader("Authorization", "Bearer $token")
+                    .put(requestBody)
+                    .build()
+
+                client.newCall(request).execute().use { response ->
+                    if (response.isSuccessful) {
+                        Log.d("API_UNBAN", "Unban thành công")
+                        return@withContext true
+                    } else {
+                        Log.e("API_UNBAN", "Lỗi: ${response.code} - ${response.body?.string()}")
+                        return@withContext false
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                return@withContext false
+            }
+        }
 
 }
 

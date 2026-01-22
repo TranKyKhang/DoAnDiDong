@@ -497,10 +497,11 @@ export const getCommunityMembers = async (req, res) => {
                 u.username, 
                 u.display_name, 
                 u.avatar, 
-                uc.role
+                uc.role,
+                uc.is_banned
             FROM users u
             JOIN users_communities uc ON u.id = uc.user_id
-            WHERE uc.community_id = ? AND uc.is_banned = 0
+            WHERE uc.community_id = ?
             ORDER BY 
                 CASE 
                     WHEN uc.role = 'admin' THEN 1

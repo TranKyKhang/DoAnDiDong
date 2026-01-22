@@ -36,5 +36,6 @@ data class MemberModel(
     val username: String,
     val displayName: String?,
     val avatar: String?,
-    val role: String, // "admin", "moderator", "member"
+    val role: String, // "admin", "moderator", "member",
+    val isBanned: Int = 0 // Thêm trường này (0: không ban, 1: ban)
 )
