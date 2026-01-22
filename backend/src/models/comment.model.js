@@ -3,7 +3,11 @@ import db from "../config/db.js";
 const Comment = {
   getByPostId: async (postId, userId) => {
     const sql = `
-      SELECT c.*, u.username, v.type as user_vote_status
+      SELECT 
+        c.*, 
+        u.username,
+        REPLACE(v.type, '"', '') AS user_vote_status,
+        u.avatar AS author_avatar
       FROM comments c
       JOIN users u ON c.user_id = u.id
       LEFT JOIN votes v ON v.comment_id = c.id 
@@ -37,6 +41,11 @@ const Comment = {
       data.parent_id || null,
       data.depth_level
     ]);
+    return result;
+  },
+  updateCommentCount: async (postId) => {
+    const sql = `UPDATE posts SET comment_count = comment_count + 1 WHERE id = ?`;
+    const [result] = await db.query(sql, [postId]);
     return result;
   }
 };

@@ -1,10 +1,8 @@
 import db from "../config/db.js";
 
 export const createNotification = (req, res) => {
-    // 1. Lấy dữ liệu từ Body
     const { type, content, recipient_id, sender_id, post_id, comment_id } = req.body;
 
-    // 2. Validate dữ liệu
     if (!type || !content || !recipient_id) {
         return res.status(400).json({
             success: false,
@@ -20,7 +18,6 @@ export const createNotification = (req, res) => {
         });
     }
 
-    // 3. SỬA LỖI: Viết câu lệnh SQL INSERT trực tiếp thay vì gọi Notification.create
     const sql = `
         INSERT INTO notifications (type, content, recipient_id, sender_id, post_id, comment_id, created_at) 
         VALUES (?, ?, ?, ?, ?, ?, NOW())
@@ -30,7 +27,6 @@ export const createNotification = (req, res) => {
         if (err) {
             console.error('Lỗi tạo thông báo:', err);
             
-            // Bắt lỗi khóa ngoại (Foreign Key) nếu user/post không tồn tại
             if (err.code === 'ER_NO_REFERENCED_ROW_2') {
                 return res.status(404).json({
                     success: false,
@@ -60,7 +56,6 @@ export const createNotification = (req, res) => {
 
 
 export const getNotificationsByUser = async (req, res) => {
-    console.log(">>> VÀO getNotificationsByUser");
 
     const userId = req.user?.id;
     console.log("userId =", userId);
@@ -76,14 +71,9 @@ export const getNotificationsByUser = async (req, res) => {
     const limit = parseInt(req.query.limit) || 20;
     const offset = (page - 1) * limit;
 
-    // 🔥 BỔ SUNG SQL BỊ THIẾU
     const sql = `
         SELECT 
-            n.id,
-            n.type,
-            n.content,
-            n.created_at,
-            n.post_id,
+            n.*,
             n.comment_id,
             u.id AS sender_id,
             u.username AS sender_name,
@@ -96,11 +86,8 @@ export const getNotificationsByUser = async (req, res) => {
     `;
 
     try {
-        console.log(">>> TRƯỚC QUERY");
 
         const [results] = await db.query(sql, [userId, limit, offset]);
-
-        console.log(">>> SAU QUERY");
 
         return res.status(200).json({
             success: true,
@@ -111,6 +98,53 @@ export const getNotificationsByUser = async (req, res) => {
         });
     } catch (err) {
         console.error("Lỗi lấy thông báo:", err);
+        return res.status(500).json({
+            success: false,
+            message: "Lỗi server",
+            error: err.message
+        });
+    }
+};
+export const updateIsRead = async (req, res) => {
+    const userId = req.user?.id;
+    const notificationId = req.params.id;
+
+    if (!userId) {
+        return res.status(401).json({
+            success: false,
+            message: "Chưa đăng nhập"
+        });
+    }
+
+    if (!notificationId || isNaN(notificationId)) {
+        return res.status(400).json({
+            success: false,
+            message: "ID thông báo không hợp lệ"
+        });
+    }
+
+    const sql = `
+        UPDATE notifications
+        SET is_read = 1
+        WHERE id = ? AND recipient_id = ?
+    `;
+
+    try {
+        const [result] = await db.query(sql, [notificationId, userId]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "Thông báo không tồn tại hoặc không thuộc về bạn"
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Đã đánh dấu thông báo là đã đọc"
+        });
+    } catch (err) {
+        console.error("Lỗi cập nhật is_read:", err);
         return res.status(500).json({
             success: false,
             message: "Lỗi server",

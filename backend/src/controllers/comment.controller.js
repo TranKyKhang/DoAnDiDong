@@ -1,8 +1,7 @@
 import CommentModel from "../models/comment.model.js";
 
-/* ======================
-   BUILD COMMENT TREE
-====================== */
+//BUILD COMMENT TREE
+
 const calculateDepth = (nodes, level) => {
     nodes.forEach(node => {
         node.depth_level = level;
@@ -34,9 +33,7 @@ const buildCommentTree = (comments) => {
     return tree;
 };
 
-/* ======================
-   GET COMMENTS BY POST
-====================== */
+// GET COMMENTS BY POST 
 export const getCommentsByPost = async (req, res) => {
     console.log(">>> VÀO getCommentsByPost");
     const userId = req.user.id;
@@ -50,14 +47,11 @@ export const getCommentsByPost = async (req, res) => {
     }
 
     try {
-        console.log(">>> Vao TRY");
 
         const comments = await CommentModel.getByPostId(postId, userId);
-        console.log("COMMENTS RAW =", comments);
 
         const tree = buildCommentTree(comments);
 
-        console.log(">>>    TRUOC RETURN res.json");
         console.log("COMMENTS LENGTH =", comments.length);
         
         console.log(tree);
@@ -77,9 +71,7 @@ export const getCommentsByPost = async (req, res) => {
     }
 };
 
-/* ======================
-   CREATE COMMENT
-====================== */
+
 export const createComment = async (req, res) => {
     try {
         const { content, post_id, parent_id } = req.body;
@@ -112,6 +104,9 @@ export const createComment = async (req, res) => {
             parent_id,
             depth_level
         });
+        if (result.affectedRows > 0) {
+            await CommentModel.updateCommentCount(post_id);
+        }
 
         return res.status(201).json({
             success: true,
@@ -127,3 +122,30 @@ export const createComment = async (req, res) => {
         });
     }
 };
+
+
+export const getCommentDetail = async (req, res) => {
+    try {
+      const { id } = req.params;
+  
+      const comment = await CommentModel.getById(id);
+  
+      if (!comment) {
+        return res.status(404).json({
+          success: false,
+          message: "Comment không tồn tại"
+        });
+      }
+  
+      return res.json({
+        success: true,
+        data: comment
+      });
+    } catch (err) {
+      return res.status(500).json({
+        success: false,
+        error: err.message
+      });
+    }
+  };
+  
