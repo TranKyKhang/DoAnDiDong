@@ -54,7 +54,6 @@ fun CommunityScreen(
     var selectedTab by remember { mutableStateOf(0) }
     var isJoined by remember { mutableStateOf(false) }
 
-    // === PAGINATION ===
     var page by remember { mutableStateOf(1) }
     var isLastPage by remember { mutableStateOf(false) }
     var isLoadingMore by remember { mutableStateOf(false) }
@@ -62,7 +61,6 @@ fun CommunityScreen(
     val myUserId = UserManager.getUserId(context)
     val myMember = memberList.find { it.id == myUserId }
 
-    // === LOAD DATA ===
     LaunchedEffect(communityId, page) {
 
         if (page == 1) isLoading = true else isLoadingMore = true
@@ -214,7 +212,6 @@ fun CommunityScreen(
                 }
             }
 
-            // ===== POSTS =====
             if (selectedTab == 0) {
                 items(posts) { post ->
                     AppPostItem(post = post)
@@ -264,13 +261,12 @@ fun CommunityScreen(
                 }
             }
 
-            // ===== MEMBERS =====
-            if (selectedTab == 1) {
+            if (selectedTab == 1 && myMember != null) {
                 items(memberList) { member ->
                     MemberItemRow(
                         member = member,
-                        currentUserId = myMember!!.id,
-                        currentUserRole = myMember!!.role,
+                        currentUserId = myMember.id,
+                        currentUserRole = myMember.role,
                         onChangeRole = { memberId, newRole ->
                             scope.launch {
                                 val success = communityController.changeMemberRole(
@@ -332,14 +328,16 @@ fun MemberItemRow(
     }
 
     ListItem(
-        modifier = Modifier.clickable {
-            if (!canInteract) {
+        modifier = if (!canInteract) {
+            Modifier.clickable {
                 Toast.makeText(
                     context,
                     "Bạn không có quyền thay đổi role",
                     Toast.LENGTH_SHORT
                 ).show()
             }
+        } else {
+            Modifier
         },
         leadingContent = {
             AsyncImage(
