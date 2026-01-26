@@ -1,4 +1,4 @@
-const pool = require('../config/db');
+import pool from "../config/db.js";
 
 const generateDiscriminator = async (baseUsername) => {
   for (let i = 0; i < 120; i++) {
@@ -12,5 +12,4 @@ const generateDiscriminator = async (baseUsername) => {
   }
   throw new Error('Không thể tạo username unique sau nhiều lần thử');
 };
-
-module.exports = generateDiscriminator;
+export default generateDiscriminator;

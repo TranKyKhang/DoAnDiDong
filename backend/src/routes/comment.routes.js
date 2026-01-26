@@ -1,11 +1,18 @@
-const express = require("express");
+import express from "express";
 const router = express.Router();
-const commentController = require("../controllers/comment.controller");
 
-router.get("/post/:id", commentController.getCommentsByPost);
+import { 
+  getCommentsByPost, 
+  createComment,
+  getCommentDetail
+} from "../controllers/comment.controller.js";
 
-router.post("/", commentController.createComment);
+import { verifyToken } from "../middlewares/auth.middleware.js";
 
-router.patch("/:id/vote", commentController.voteComment);
+router.get("/post/:id", verifyToken, getCommentsByPost);
 
-module.exports = router;
+router.post("/", verifyToken, createComment);
+router.get("/:id", verifyToken, getCommentDetail);
+
+
+export default router;

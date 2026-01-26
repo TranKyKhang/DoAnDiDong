@@ -1,7 +1,6 @@
-import app from "./src/app.js";  // import default
-import dotenv from "dotenv";
-
-dotenv.config();
+import './src/config/generateJwtSecret.js';
+import './src/config/loadEnv.js';
+import app from "./src/app.js"; 
 
 const PORT = process.env.PORT || 3000;
 

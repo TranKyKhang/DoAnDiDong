@@ -1,9 +1,7 @@
-const { OAuth2Client } = require('google-auth-library');
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs'); // chỉ dùng nếu cần hash gì đó, nhưng ở đây chưa cần
-const pool = require('../config/db');
-const generateDiscriminator = require('../utils/generateDiscriminator');
-const { JWT_SECRET } = require('../middlewares/auth.middleware');
+import { OAuth2Client } from 'google-auth-library';
+import jwt from 'jsonwebtoken';
+import pool from '../config/db.js';
+import generateDiscriminator from '../utils/generateDiscriminator.js';
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_WEB_CLIENT_ID);
 
@@ -27,7 +25,7 @@ const findOrCreateGoogleUser = async (payload) => {
   const fullUsername = `${usernameBase}#${discriminator}`;
 
   const [result] = await pool.execute(
-    'INSERT INTO users (email, username, google_id, display_name, created_at) VALUES (?, ?, ?, ?, NOW())',
+    'INSERT INTO users (email, username, google_id, display_name, login_method, created_at) VALUES (?, ?, ?, ?, "google", NOW())',
     [email, fullUsername, googleId, name || usernameBase]
   );
 
@@ -36,34 +34,24 @@ const findOrCreateGoogleUser = async (payload) => {
   return rows[0];
 };
 
-const googleLogin = async (req, res) => {
+export const googleLogin = async (req, res) => {
   console.log("Google login request received");
 
   const { idToken } = req.body;
-  if (!idToken) {
-    return res.status(400).json({ success: false, message: 'Thiếu ID Token' });
-  }
+  if (!idToken) return res.status(400).json({ success: false, message: 'Thiếu ID Token' });
 
   try {
-    // Verify ID Token từ Google
     const ticket = await googleClient.verifyIdToken({
       idToken,
       audience: process.env.GOOGLE_WEB_CLIENT_ID,
     });
 
     const payload = ticket.getPayload();
-    if (!payload) {
-      return res.status(401).json({ success: false, message: 'Token không hợp lệ' });
-    }
+    if (!payload) return res.status(401).json({ success: false, message: 'Token không hợp lệ' });
 
     const user = await findOrCreateGoogleUser(payload);
 
-    // Tạo JWT token
-    const token = jwt.sign(
-      { id: user.id, username: user.username },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    const token = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
     res.json({
       success: true,
@@ -73,7 +61,6 @@ const googleLogin = async (req, res) => {
         email: user.email,
         username: user.username,
         display_name: user.display_name,
-        // thêm các field khác nếu cần: bio, avatar, ...
       }
     });
   } catch (error) {
@@ -81,5 +68,3 @@ const googleLogin = async (req, res) => {
     res.status(401).json({ success: false, message: 'Đăng nhập Google thất bại' });
   }
 };
-
-module.exports = { googleLogin };

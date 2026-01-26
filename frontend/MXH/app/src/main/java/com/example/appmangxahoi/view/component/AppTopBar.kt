@@ -2,6 +2,7 @@ package com.example.appmangxahoi.view.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -13,15 +14,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.wear.compose.material.ripple
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppTopBar(
-    currentFeed: String, // 1. Nhận tên Feed hiện tại (Home/Popular) từ HomeScreen
+    currentFeed: String,
     onAvatarClick: () -> Unit,
     onMenuClick: () -> Unit,
     onSearchClick: () -> Unit,
-    onFeedClick: (String) -> Unit // 2. Sự kiện khi chọn menu
+    onFeedClick: (String) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -37,14 +39,19 @@ fun AppTopBar(
         },
         title = {
             Box(contentAlignment = Alignment.CenterStart) {
+                val feedInteraction = remember { MutableInteractionSource() }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
-                        .clickable { expanded = !expanded }
+                        .clickable(
+                            interactionSource = feedInteraction,
+                            indication = ripple(),
+                            onClick = { expanded = !expanded }
+                        )
                         .padding(end = 8.dp)
                 ) {
                     Text(
-                        text = currentFeed, // 3. Hiển thị tên Feed hiện tại
+                        text = currentFeed,
                         fontWeight = FontWeight.Bold,
                         color = Color.Black,
                         fontSize = 20.sp
@@ -62,22 +69,19 @@ fun AppTopBar(
                     onDismissRequest = { expanded = false },
                     modifier = Modifier.background(Color.White)
                 ) {
-                    // Option 1: Home
                     DropdownMenuItem(
                         text = { Text("Home") },
                         onClick = {
                             expanded = false
-                            onFeedClick("Home") // 4. Báo ra ngoài là chọn Home
+                            onFeedClick("Home")
                         },
                         leadingIcon = { Icon(Icons.Filled.Home, null) }
                     )
-
-                    // Option 2: Popular
                     DropdownMenuItem(
                         text = { Text("Popular") },
                         onClick = {
                             expanded = false
-                            onFeedClick("Popular") // 5. Báo ra ngoài là chọn Popular
+                            onFeedClick("Popular")
                         },
                         leadingIcon = { Icon(Icons.Filled.Star, null) }
                     )
@@ -85,10 +89,21 @@ fun AppTopBar(
             }
         },
         actions = {
-            IconButton(onClick = onSearchClick) {
+            // Nút Search - FIX CLICKABLE
+            val searchInteraction = remember { MutableInteractionSource() }
+            IconButton(
+                onClick = onSearchClick,
+                interactionSource = searchInteraction
+            ) {
                 Icon(Icons.Filled.Search, contentDescription = "Search")
             }
-            IconButton(onClick = onAvatarClick) {
+
+            // Nút Profile - FIX CLICKABLE
+            val avatarInteraction = remember { MutableInteractionSource() }
+            IconButton(
+                onClick = onAvatarClick,
+                interactionSource = avatarInteraction
+            ) {
                 Icon(Icons.Filled.AccountCircle, contentDescription = "Profile")
             }
         }

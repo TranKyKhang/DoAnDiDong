@@ -14,6 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.appmangxahoi.controller.Screen
 
@@ -56,12 +57,27 @@ fun AppBottomBar(navController: NavController) {
                 // Nếu route hiện tại trùng với nút này -> chọn nó
                 selected = currentRoute == screen.route,
                 onClick = {
-                    // Chuyển màn hình khi bấm
-                    navController.navigate(screen.route) {
-                        // Xóa các màn hình cũ khỏi stack để không bị đầy bộ nhớ
-                        popUpTo(navController.graph.startDestinationId) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
+                    if (screen.route == Screen.Home.route) {
+                        // === TRƯỜNG HỢP 1: BẤM VÀO NÚT HOME ===
+                        navController.navigate(Screen.Home.route) {
+                            // Quay về điểm bắt đầu (root)
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                // QUAN TRỌNG: False để KHÔNG lưu trạng thái cũ -> Reset lại Home
+                                saveState = false
+                            }
+                            launchSingleTop = true
+                            // QUAN TRỌNG: False để KHÔNG khôi phục vị trí lướt -> Về đầu trang
+                            restoreState = false
+                        }
+                    } else {
+                        // === TRƯỜNG HỢP 2: BẤM VÀO NÚT KHÁC (Create, Inbox) ===
+                        navController.navigate(screen.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
                 }
             )

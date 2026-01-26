@@ -3,19 +3,19 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     id("org.jetbrains.kotlin.plugin.serialization") version "2.0.0"
-   // Dòng này dùng cho Compose (nếu có trong TOML)
+    // Dòng này dùng cho Compose (nếu có trong TOML)
 }
 
 android {
     namespace = "com.example.appmangxahoi"
-    compileSdk = 35 // BẮT BUỘC: Phải là 35 để chạy được các thư viện mới nhất
+    compileSdk = 36 // BẮT BUỘC: Phải >= 35 để chạy được các thư viện mới nhất
     buildFeatures {
         compose = true
     }
     defaultConfig {
         applicationId = "com.example.appmangxahoi"
-        minSdk = 24
-        targetSdk = 34 // Target 34 hoặc 35 đều được
+        minSdk = 25
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
@@ -82,6 +82,9 @@ dependencies {
     // 3. THƯ VIỆN KHÁC
     // Load ảnh từ mạng
     implementation("io.coil-kt:coil-compose:2.7.0")
+    implementation(libs.androidx.ui.text)
+    implementation(libs.androidx.compose.navigation)
+    implementation(libs.androidx.foundation)
 
     // 4. TESTING & DEBUG
     testImplementation(libs.junit)
@@ -106,5 +109,10 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.4")
+
+    implementation("androidx.compose.runtime:runtime-livedata:1.6.0")
+
+    //google
+    implementation("com.google.android.gms:play-services-auth:21.2.0")
 
 }

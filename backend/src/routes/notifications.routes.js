@@ -1,8 +1,12 @@
-const express = require('express');
+import express from "express";
+import {verifyToken} from "../middlewares/auth.middleware.js"
 const router = express.Router();
-const notificationController = require('../controllers/notification.controller');
+import { createNotification,  getNotificationsByUser, updateIsRead} from "../controllers/notification.controller.js"
 
-router.post('/', notificationController.createNotification);
-router.get('/:userId', notificationController.getNotificationsByUser);
+router.post('/', verifyToken, createNotification);
+router.get('/noti', verifyToken,  getNotificationsByUser);
+router.patch("/isread/:id", verifyToken, updateIsRead);
 
-module.exports = router;
+
+
+export default router; 
