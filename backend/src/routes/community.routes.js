@@ -1,6 +1,6 @@
 
 import express from "express";
-import { getAllCommunity } from "../controllers/community.controller.js";
+import { getAllCommunity, searchPostsInCommunity } from "../controllers/community.controller.js";
 import {banUser} from "../controllers/community.controller.js"
 import { unBanUser } from "../controllers/community.controller.js";
 import { changeRole } from "../controllers/community.controller.js";
@@ -49,4 +49,5 @@ router.put(
   changeRole
 );
 router.get("/search", verifyToken, searchCommunities);
+router.get("/posts/:communityId/search", verifyToken, searchPostsInCommunity);
 export default router;

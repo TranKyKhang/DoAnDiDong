@@ -27,7 +27,7 @@ data class CommunityModel(
     val rules: String? = null,
 
     @SerialName("member_count")
-    val memberCount: Int
+    val memberCount: Int? = 0
 )
 
 @Serializable

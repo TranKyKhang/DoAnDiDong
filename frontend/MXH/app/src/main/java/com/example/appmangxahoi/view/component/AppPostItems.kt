@@ -1,5 +1,6 @@
 package com.example.appmangxahoi.view.component
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -8,6 +9,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Share
@@ -32,23 +34,41 @@ import com.example.appmangxahoi.controller.post
 import com.example.appmangxahoi.model.PostModel
 import kotlinx.coroutines.launch
 
+
 const val BASE_URL = "http://10.0.2.2:3000"
 
 @Composable
-fun AppPostItem(post: PostModel) {
+fun AppPostItem(
+    onClick: () -> Unit,
+    post: PostModel,
+    onPostUpdated: () -> Unit
+) {
     val avatarUrl = post.authorAvatarUrl?.let { "$BASE_URL$it" }
     val videoFullUrl = post.video?.let { "$BASE_URL$it" }
     val firstImageUrl = post.images.firstOrNull()?.let { "$BASE_URL$it" }
+
+    var menuExpanded by remember { mutableStateOf(false) }
+    var showEditDialog by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val postController = remember { post() }
+
     Card(
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp, horizontal = 8.dp)
+            .clickable { onClick() }
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
-            // HEADER
-            Row(verticalAlignment = Alignment.CenterVertically) {
+
+            // --- HEADER ---
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 AsyncImage(
                     model = avatarUrl,
                     contentDescription = "Avatar",
@@ -58,8 +78,10 @@ fun AppPostItem(post: PostModel) {
                         .clip(CircleShape)
                         .background(Color.LightGray)
                 )
+
                 Spacer(modifier = Modifier.width(8.dp))
-                Column {
+
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "r/${post.communityName}",
                         style = MaterialTheme.typography.labelMedium,
@@ -72,14 +94,64 @@ fun AppPostItem(post: PostModel) {
                         color = Color.Gray
                     )
                 }
+
+                Box {
+                    IconButton(
+                        onClick = { menuExpanded = true },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "Menu",
+                            tint = Color.Gray
+                        )
+                    }
+
+                    DropdownMenu(
+                        expanded = menuExpanded,
+                        onDismissRequest = { menuExpanded = false },
+                        modifier = Modifier.background(Color.White)
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Chỉnh sửa bài viết") },
+                            onClick = {
+                                menuExpanded = false
+                                showEditDialog = true
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Xóa bài viết", color = Color.Red) },
+                            onClick = {
+                                menuExpanded = false
+
+                                scope.launch {
+                                    val success = postController.removePost(
+                                        context = context,
+                                        postId = post.id
+                                    )
+
+                                    if (success) {
+                                        onPostUpdated()
+                                        Toast.makeText(context, "Đã xóa bài viết thành công", Toast.LENGTH_SHORT).show()
+                                    }else {
+                                        Toast.makeText(context, " xóa bài viết thất bại ", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                        )
+
+                    }
+                }
             }
+
+            // --- TITLE & CONTENT ---
             Spacer(modifier = Modifier.height(8.dp))
-            // TITLE & CONTENT
             Text(
                 text = post.title,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
+
             if (post.content.isNotEmpty()) {
                 Text(
                     text = post.content,
@@ -88,7 +160,8 @@ fun AppPostItem(post: PostModel) {
                     color = Color.DarkGray
                 )
             }
-            // LINK
+
+            // --- LINK ---
             if (!post.linkUrl.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
@@ -98,7 +171,8 @@ fun AppPostItem(post: PostModel) {
                     maxLines = 1
                 )
             }
-            // IMAGE / VIDEO
+
+            // --- IMAGE / VIDEO ---
             if (videoFullUrl != null) {
                 Spacer(modifier = Modifier.height(12.dp))
                 var isPlaying by remember { mutableStateOf(false) }
@@ -124,7 +198,9 @@ fun AppPostItem(post: PostModel) {
                                 model = it,
                                 contentDescription = null,
                                 contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize().alpha(0.7f)
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .alpha(0.7f)
                             )
                         }
                         Icon(
@@ -149,21 +225,101 @@ fun AppPostItem(post: PostModel) {
                         .clip(RoundedCornerShape(12.dp))
                 )
             }
+
+            // --- FOOTER ---
             Spacer(modifier = Modifier.height(12.dp))
-            // FOOTER
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                VoteActionPill(voteCount = post.rating, status = post.userVoteStatus, postId = post.id)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButtonChip(icon = Icons.Outlined.ChatBubbleOutline, text = post.commentCount.toString())
-                    OutlinedButtonChip(icon = Icons.Outlined.Share, text = "Share")
-                }
+                VoteActionPill(postId = post.id, voteCount = post.rating, status = post.userVoteStatus)
+                OutlinedButtonChip(
+                    icon = Icons.Outlined.ChatBubbleOutline,
+                    text = post.commentCount.toString()
+                )
             }
         }
     }
+
+    if (showEditDialog) {
+
+        var editContent by remember { mutableStateOf(post.content) }
+        var isLoading by remember { mutableStateOf(false) }
+
+        AlertDialog(
+            onDismissRequest = {
+                if (!isLoading) showEditDialog = false
+            },
+            title = { Text("Chỉnh sửa bài viết") },
+            text = {
+                Column {
+
+                    // ===== TITLE (KHÓA) =====
+                    OutlinedTextField(
+                        value = post.title,
+                        onValueChange = {},
+                        label = { Text("Tiêu đề") },
+                        enabled = false,
+                        singleLine = true
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedTextField(
+                        value = editContent,
+                        onValueChange = { editContent = it },
+                        label = { Text("Nội dung") },
+                        minLines = 4,
+                        enabled = !isLoading
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = !isLoading,
+                    onClick = {
+                        scope.launch {
+                            isLoading = true
+
+                            val success = postController.updatePost(
+                                context = context,
+                                postId = post.id,
+                                content = editContent
+                            )
+
+                            isLoading = false
+
+                            if (success) {
+                                onPostUpdated()
+                                showEditDialog = false
+                            } else {
+                                // TODO: show Toast nếu muốn
+                            }
+                        }
+                    }
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text("Lưu")
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    enabled = !isLoading,
+                    onClick = { showEditDialog = false }
+                ) {
+                    Text("Hủy")
+                }
+            }
+        )
+    }
+
 }
 
 @Composable

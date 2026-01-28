@@ -45,7 +45,8 @@ import kotlinx.coroutines.launch
 fun CommunityScreen(
     communityId: Int,
     onBackClick: () -> Unit,
-    onSearchClick: () -> Unit
+    onSearchClick: () -> Unit,
+    onPostClick: (String) -> Unit = {},
 ) {
     val context = LocalContext.current
     val postController = remember { post() }
@@ -85,6 +86,16 @@ fun CommunityScreen(
         }
         isLoadingMore = false
     }
+    fun reloadPosts() {
+        scope.launch {
+            isLoading = true
+            val result = postController.getFollowedPosts(context, page)
+            posts = result ?: emptyList()
+            isLastPage = result?.size ?: 0 < 20
+            isLoading = false
+        }
+    }
+
     if (isLoading) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
@@ -228,7 +239,16 @@ fun CommunityScreen(
             }
             if (selectedTab == 0 || selectedTab == 1 || selectedTab == 2 && !isAmIBanned) {
                 items(posts) { post ->
-                    AppPostItem(post = post)
+                    AppPostItem(
+                        post = post,
+                        onClick = {
+                            onPostClick(post.id.toString())
+
+                        },
+                        onPostUpdated = {
+                            reloadPosts()
+                        }
+                    )
                 }
                 item {
                     Row(

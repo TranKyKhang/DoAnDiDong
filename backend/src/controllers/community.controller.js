@@ -528,3 +528,47 @@ export const getCommunityMembers = async (req, res) => {
         });
     }
 };
+
+export const searchPostsInCommunity = async (req, res) => {
+    console.log("ok")
+    try {
+        const { communityId } = req.params;
+        const { q } = req.query;
+
+        if (!q || q.trim().length === 0) {
+            return res.json({ success: true, data: [] });
+        }
+
+        const sql = `
+            SELECT p.*, u.username as author_name, u.avatar as authorAvatarUrl, c.name as community_name
+        FROM posts p
+          JOIN users u ON p.user_id = u.id
+          JOIN communities c ON p.community_id = c.id
+        WHERE p.community_id = ? AND p.title LIKE ?
+        ORDER BY 
+            CASE 
+                WHEN p.title = ? THEN 1      -- Exact match gets top priority
+                WHEN p.title LIKE ? THEN 2   -- "Starts with" gets second priority
+                ELSE 3                    -- "Contains" gets third priority
+            END,
+            title ASC
+        LIMIT 10`;
+
+        const exactMatch = q;
+        const startsWith = `${q}%`;
+        const contains = `%${q}%`;
+
+        const [results] = await db.query(sql, [communityId, contains, exactMatch, startsWith]);
+            console.log(results)
+        res.json({
+            success: true,
+            data: results
+        });
+    } catch (err) {
+        console.error(err)
+        return res.status(500).json({
+            success: false,
+            message: err.message
+        })
+    }
+};

@@ -40,7 +40,7 @@ data class PostModel(
     val communityId: Int,
     val images: List<String> = emptyList(),
     @SerialName("community_name")
-    val communityName: String,
+    val communityName: String? = null,
     @SerialName("author_name")
     val authorName: String,
     @SerialName("authorAvatarUrl")

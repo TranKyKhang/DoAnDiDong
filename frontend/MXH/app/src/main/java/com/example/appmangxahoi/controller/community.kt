@@ -8,6 +8,7 @@ import com.example.appmangxahoi.model.CommunityModel
 import com.example.appmangxahoi.model.CommunityResponse
 import com.example.appmangxahoi.model.DetailCommunityResponse
 import com.example.appmangxahoi.model.MemberModel
+import com.example.appmangxahoi.model.PostModel
 import com.example.appmangxahoi.model.PostResponse
 import com.example.appmangxahoi.utils.TokenManager
 import com.example.appmangxahoi.view.screens.CreateCommunityData
@@ -23,6 +24,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
+import java.time.temporal.TemporalQuery
 
 class community {
     private val client = OkHttpClient()
@@ -424,4 +426,85 @@ class community {
                 return@withContext false
             }
         }
+
+    suspend fun searchCommunities(context: Context, query: String?): List<CommunityModel>? =
+        withContext(Dispatchers.IO) {
+            val token = TokenManager.getToken(context)
+            if (token == null) {
+                Log.e("API_DEBUG", " Lỗi: Token bị null (Chưa đăng nhập?)")
+                return@withContext null
+            }
+
+            try {
+                Log.d("API_DEBUG", " Bắt đầu gọi API: $BASE_URL/api/communities/search?q=${query}")
+
+                val request = Request.Builder()
+                    .url("$BASE_URL/api/communities/search?q=${query}")
+                    .addHeader("Authorization", "Bearer $token")
+                    .get()
+                    .build()
+
+                client.newCall(request).execute().use { response ->
+
+                    if (!response.isSuccessful) {
+                        Log.e(
+                            "API_DEBUG",
+                            " Lỗi Server: Code ${response.code} - ${response.message}"
+                        )
+                        return@withContext null
+                    }
+
+                    val body = response.body?.string()
+                    if (body == null) {
+                        Log.e("API_DEBUG", " Lỗi: Body rỗng")
+                        return@withContext null
+                    }
+
+
+                    Log.d("API_DEBUG", " Server trả về JSON: $body")
+
+                    val listCommunity = json.decodeFromString<CommunityResponse>(body).data
+                    Log.d("API_DEBUG", " Parse thành công: ${listCommunity.size} bài viết")
+
+                    return@withContext listCommunity
+                }
+            } catch (e: Exception) {
+                Log.e("API_DEBUG", " CRASH KHI GỌI API/PARSE JSON: ${e.message}")
+                e.printStackTrace()
+                null
+            }
+        }
+
+    suspend fun searchCommunityPosts(
+        context: Context,
+        communityId: Int,
+        query: String,
+        page: Int = 1
+    ): List<PostModel> =
+        withContext(Dispatchers.IO) {
+            Log.d("SEARCH_CALL", "communityId=$communityId, query=$query")
+
+            val token = TokenManager.getToken(context) ?: return@withContext emptyList()
+
+            try {
+
+                val request = Request.Builder()
+                    .url("$BASE_URL/api/communities/posts/$communityId/search?q=$query&page=$page")
+                    .addHeader("Authorization", "Bearer $token")
+                    .get()
+                    .build()
+
+                client.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) return@withContext emptyList()
+                    val body = response.body?.string() ?: return@withContext emptyList()
+                    val list = json.decodeFromString<PostResponse>(body).data
+                    Log.d("result",list.toString())
+                    return@withContext list
+                }
+            } catch (e: Exception) {
+                Log.d("exception", e.toString())
+                emptyList()
+            }
+        }
+
 }

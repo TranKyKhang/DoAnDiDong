@@ -21,10 +21,12 @@ import androidx.compose.ui.unit.dp
 import com.example.appmangxahoi.controller.post
 import com.example.appmangxahoi.model.PostModel
 import com.example.appmangxahoi.view.component.AppPostItem
+import kotlinx.coroutines.launch
 
 @Composable
 fun PopularScreen(
-    topPadding: Dp = 0.dp
+    topPadding: Dp = 0.dp,
+    onPostClick: (String) -> Unit = {},
 ) {
     val context = LocalContext.current
     val postController = remember { post() }
@@ -34,26 +36,53 @@ fun PopularScreen(
     var page by remember { mutableStateOf(1) }
     var isLoading by remember { mutableStateOf(false) }
     var isLastPage by remember { mutableStateOf(false) }
-
-    // 🔹 Gọi API mỗi khi page thay đổi
-    LaunchedEffect(page,Unit) {
+    val scope = rememberCoroutineScope()
+    // 🔹 Call API khi page thay đổi
+    LaunchedEffect(page) {
+        if (isLoading) return@LaunchedEffect
         isLoading = true
 
         val result = postController.getPopularPosts(context, page)
 
         if (result != null) {
-            posts = result
+
+
+            val newPosts = if (page == 1) {
+                result
+            } else {
+                (posts + result)
+                    .distinctBy { it.id }
+            }
+
+            posts = newPosts
             isLastPage = result.size < 20
 
             Log.d(
                 "POPULAR_SCREEN",
-                "Page $page - ${result.size} posts"
+                "Page $page - total ${posts.size} posts"
             )
         } else {
             Log.e("POPULAR_SCREEN", "API trả về null")
         }
 
         isLoading = false
+    }
+    fun reloadPosts() {
+        scope.launch {
+            isLoading = true
+            val result = postController.getFollowedPosts(context, page)
+            posts = result ?: emptyList()
+            isLastPage = result?.size ?: 0 < 20
+            isLoading = false
+        }
+    }
+
+    // 🔹 Debug duplicate id (có thể xoá sau)
+    LaunchedEffect(posts) {
+        val dup = posts.groupBy { it.id }.filter { it.value.size > 1 }
+        if (dup.isNotEmpty()) {
+            Log.e("POPULAR_SCREEN", "DUPLICATE IDS: $dup")
+        }
     }
 
     // 🔹 UI
@@ -71,15 +100,23 @@ fun PopularScreen(
             )
         ) {
 
-            // Danh sách bài viết
+            // 🔹 Danh sách bài viết
             items(
                 items = posts,
-                key = { it.id }
+                key = { "${it.id}_${it.createdAt}" }
             ) { post ->
-                AppPostItem(post = post)
+                AppPostItem(
+                    post = post,
+                    onClick = {
+                        onPostClick(post.id.toString())
+                    },
+                    onPostUpdated ={
+                        reloadPosts()
+                    }
+                )
             }
 
-            // Footer phân trang
+            // 🔹 Footer phân trang
             item {
                 Row(
                     modifier = Modifier
@@ -88,9 +125,10 @@ fun PopularScreen(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
 
-                    // Trang trước
                     IconButton(
-                        onClick = { page-- },
+                        onClick = {
+                            if (page > 1 && !isLoading) page--
+                        },
                         enabled = page > 1 && !isLoading
                     ) {
                         Icon(
@@ -99,9 +137,10 @@ fun PopularScreen(
                         )
                     }
 
-                    //  Trang sau
                     IconButton(
-                        onClick = { page++ },
+                        onClick = {
+                            if (!isLastPage && !isLoading) page++
+                        },
                         enabled = !isLastPage && !isLoading
                     ) {
                         Icon(
@@ -113,7 +152,7 @@ fun PopularScreen(
             }
         }
 
-        // Loading giữa màn hình
+        // 🔹 Loading overlay
         if (isLoading) {
             Box(
                 modifier = Modifier.fillMaxSize(),

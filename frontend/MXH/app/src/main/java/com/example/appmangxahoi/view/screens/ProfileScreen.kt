@@ -40,13 +40,14 @@ import com.example.appmangxahoi.view.component.AppPostItem
 import kotlinx.coroutines.launch
 
 @Composable
-fun ProfileScreen(context: Context = LocalContext.current) {
+fun ProfileScreen(context: Context = LocalContext.current, onPostClick: (String) -> Unit = {},) {
     val userController = remember { UserController() }
     val postController = remember { post() }
     val scope = rememberCoroutineScope()
     var profile by remember { mutableStateOf<UserModel?>(null) }
     var posts by remember { mutableStateOf<List<PostModel>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
+    var isLoading by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf(false) }
     // 🔹 ADD: PAGINATION STATE
     var page by remember { mutableStateOf(1) }
@@ -102,6 +103,17 @@ fun ProfileScreen(context: Context = LocalContext.current) {
             }
         )
     }
+
+    fun reloadPosts() {
+        scope.launch {
+            isLoading = true
+            val result = postController.getFollowedPosts(context, page)
+            posts = result ?: emptyList()
+            isLastPage = result?.size ?: 0 < 20
+            isLoading = false
+        }
+    }
+
     /* ================= LOADING ================= */
     if (loading) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -245,7 +257,15 @@ fun ProfileScreen(context: Context = LocalContext.current) {
             items = posts,
             span = { GridItemSpan(3) }
         ) { post ->
-            AppPostItem(post = post)
+            AppPostItem(
+                post = post,
+                onClick = {
+                    onPostClick(post.id.toString())
+                },
+                onPostUpdated = {
+
+                }
+            )
         }
         /* ===== PAGINATION FOOTER (SỬA CLICKABLE) ===== */
         item(span = { GridItemSpan(3) }) {

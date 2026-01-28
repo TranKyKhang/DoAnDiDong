@@ -43,29 +43,30 @@ import androidx.wear.compose.material.ripple
 import coil.compose.AsyncImage
 import com.example.appmangxahoi.controller.community
 import com.example.appmangxahoi.model.CommunityModel
+import com.example.appmangxahoi.model.PostModel
 import kotlinx.coroutines.launch
 import kotlin.collections.emptyList
 
 @Composable
-fun SearchScreen(
+fun SearchCommunityScreen(
+    communityId: Int,
     onBackClick: () -> Unit,
-    onItemClick: (Int) -> Unit = {},
-    targetCommunity: String? = null
+    onPostClick: (Int) -> Unit
 ) {
     val context = LocalContext.current
     var query by remember { mutableStateOf("") }
     val controller = remember { community() }
-    var communities by remember {
-        mutableStateOf<List<CommunityModel>>(emptyList())
+    var posts by remember {
+        mutableStateOf<List<PostModel>>(emptyList())
     }
     val focusRequester = remember { FocusRequester() }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(query) {
         if (query.isBlank()) {
-            communities = emptyList()
+            posts = emptyList()
         } else {
-            communities = controller.searchCommunities(context, query) ?: emptyList()
+            posts = controller.searchCommunityPosts(context, communityId, query)
         }
     }
 
@@ -74,7 +75,7 @@ fun SearchScreen(
     var permissionGranted by remember { mutableStateOf(false) }
 
     val speechRecognizer = remember { SpeechRecognizer.createSpeechRecognizer(context) }
-
+    var isLoading by remember { mutableStateOf(true) }
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
@@ -90,7 +91,14 @@ fun SearchScreen(
         }
         focusRequester.requestFocus()
     }
-
+    fun reloadPosts() {
+        scope.launch {
+            isLoading = true
+            val result = controller.searchCommunityPosts(context, communityId, query)
+            posts = result ?: emptyList()
+            isLoading = false
+        }
+    }
 
     // Recognition listener with improved handling and logging
     val recognitionListener = remember {
@@ -223,36 +231,14 @@ fun SearchScreen(
 
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 if (query.isNotBlank()) {
-                    items(communities) { community ->
-                        NavigationDrawerItem(
-                            label = {
-                                Text(
-                                    text = "r/${community.name}",
-                                    fontWeight = FontWeight.Medium
-                                )
-                            },
-                            icon = {
-                                AsyncImage(
-                                    model = community.icon?.let { "http://10.0.2.2:3000$it" }
-                                        ?: "https://ui-avatars.com/api/?name=${community.name}",
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier
-                                        .size(24.dp)
-                                        .clip(CircleShape)
-                                        .background(Color.LightGray)
-                                )
-                            },
-                            selected = false,
+                    items(posts) { post ->
+                        AppPostItem(
+                            post = post,
                             onClick = {
-                                scope.launch {
-                                    onItemClick(community.id)
-                                }
+                                onPostClick(post.id)
                             },
-                            modifier = Modifier.padding(
-                                vertical = 6.dp,
-                                horizontal = 10.dp
-                            )
+                            onPostUpdated = {
+                            }
                         )
                     }
                 }

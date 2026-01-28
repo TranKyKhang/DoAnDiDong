@@ -20,6 +20,7 @@ export const getAllUsers = async (req, res) => {
 
 
 export const updateProfile = async (req, res) => {
+  console.log("ok")
   try {
     const userId = req.user.id;
 

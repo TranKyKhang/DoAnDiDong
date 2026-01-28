@@ -24,4 +24,6 @@ sealed class Screen(
     object Profile : Screen("profile", "Cá nhân", Icons.Outlined.Notifications,Icons.Filled.Notifications)
 
     object Search : Screen("search", "Tìm kiếm", Icons.Outlined.Search, Icons.Filled.Search)
+
+    object SearchCommunity : Screen("searchCommunity", "Tìm kiếm", Icons.Outlined.Search, Icons.Filled.Search)
 }

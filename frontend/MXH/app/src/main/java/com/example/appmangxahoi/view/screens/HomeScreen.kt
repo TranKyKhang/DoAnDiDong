@@ -20,6 +20,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.*
 import androidx.navigation.navArgument
+import com.example.appmangxahoi.controller.Comment
 import com.example.appmangxahoi.controller.Screen
 import com.example.appmangxahoi.controller.community
 import com.example.appmangxahoi.controller.post
@@ -27,7 +28,10 @@ import com.example.appmangxahoi.model.PostModel
 import com.example.appmangxahoi.ui.screens.CreatePostScreen
 import com.example.appmangxahoi.utils.TokenManager
 import com.example.appmangxahoi.view.component.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
 
 @Composable
 fun AppHomeScreen(rootNavController: NavHostController) {
@@ -48,6 +52,10 @@ fun AppHomeScreen(rootNavController: NavHostController) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val community = remember { community() }
+    val token = TokenManager.getToken(context) ?: ""
+    val commentController = remember { Comment() }
+
+
     val currentFeedTitle =
         if (currentRoute == "popular") "Popular" else "Home"
     // ===== LOAD POSTS (CHỈ THÊM currentRoute) =====
@@ -60,6 +68,16 @@ fun AppHomeScreen(rootNavController: NavHostController) {
             isLoading = false
         }
     }
+    fun reloadPosts() {
+        scope.launch {
+            isLoading = true
+            val result = postController.getFollowedPosts(context, page)
+            posts = result ?: emptyList()
+            isLastPage = result?.size ?: 0 < 20
+            isLoading = false
+        }
+    }
+
     // ===== LẮNG NGHE CREATE GROUP (GIỮ NGUYÊN) =====
     val currentEntry by navController.currentBackStackEntryAsState()
     val refreshNeeded = currentEntry?.savedStateHandle
@@ -91,6 +109,7 @@ fun AppHomeScreen(rootNavController: NavHostController) {
             snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
                 val isSearchRoute = currentRoute?.startsWith("search") == true
+                val isPostDetailRoute = currentRoute?.startsWith("post_detail") == true
                 when {
                     currentRoute == Screen.Profile.route -> {
                         ProfileTopBar(
@@ -109,7 +128,8 @@ fun AppHomeScreen(rootNavController: NavHostController) {
                             currentRoute == "create_group" ||
                             currentRoute?.startsWith("community/") == true ||
                             currentRoute == "change_password" ||
-                            isSearchRoute -> {}
+                            isSearchRoute||
+                            isPostDetailRoute -> { }
                     else -> {
                         AppTopBar(
                             currentFeed = currentFeedTitle,
@@ -159,7 +179,15 @@ fun AppHomeScreen(rootNavController: NavHostController) {
                         )
                     ) {
                         items(posts) { post ->
-                            AppPostItem(post = post)
+                            AppPostItem(
+                                post = post,
+                                onClick = {
+                                    navController.navigate("post_detail/${post.id}")
+                                },
+                                onPostUpdated = {
+                                    reloadPosts()
+                                }
+                            )
                         }
                         item {
                             Row(
@@ -197,7 +225,10 @@ fun AppHomeScreen(rootNavController: NavHostController) {
                 // ===== POPULAR =====
                 composable("popular") {
                     PopularScreen(
-                        topPadding = innerPadding.calculateTopPadding()
+                        topPadding = innerPadding.calculateTopPadding(),
+                        onPostClick = { postId ->
+                            navController.navigate("post_detail/$postId")
+                        }
                     )
                 }
                 // ===== CREATE POST =====
@@ -228,12 +259,48 @@ fun AppHomeScreen(rootNavController: NavHostController) {
                 }
                 // ===== INBOX =====
                 composable(Screen.Inbox.route) {
-                    InboxScreen(topPadding = innerPadding.calculateTopPadding())
+                    InboxScreen(
+                        token = token,
+                        topPadding = innerPadding.calculateTopPadding(),
+                        onNotificationClick = {notification ->
+                            val directPostId = notification.post_id
+                            if (directPostId != null) {
+                                navController.navigate("post_detail/$directPostId")
+                            }else if (notification.comment_id != null) {
+                                scope.launch {
+                                    val detail = commentController.getCommentById(
+                                        token,
+                                        notification.comment_id
+                                    )
+                                    val postId = detail?.post_id
+                                    if (postId != null) {
+                                        navController.navigate("post_detail/$postId")
+                                    } else {
+                                        withContext(Dispatchers.Main) {
+                                            Toast.makeText(
+                                                context,
+                                                "Không tìm thấy nội dung",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    }
+                                }
+                            } else {
+                                Toast.makeText(context, "Không tìm thấy nội dung", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    )
                 }
                 // ===== PROFILE =====
                 composable(Screen.Profile.route) {
-                    ProfileScreen(context = context)
+                    ProfileScreen(
+                        context = context,
+                        onPostClick = { postId ->
+                            navController.navigate("post_detail/$postId")
+                        }
+                    )
                 }
+
                 // ===== SEARCH =====
                 composable(
                     route = "search?community={community}",
@@ -242,10 +309,13 @@ fun AppHomeScreen(rootNavController: NavHostController) {
                     val communityArg = backStackEntry.arguments?.getString("community")
                     SearchScreen(
                         onBackClick = { navController.popBackStack() },
-                        onPostClick = {},
+                        onItemClick = { communityId ->
+                            navController.navigate("community/$communityId")
+                        },
                         targetCommunity = communityArg
                     )
                 }
+
                 // ===== SETTINGS =====
                 composable("settings") {
                     SettingScreen(
@@ -278,14 +348,14 @@ fun AppHomeScreen(rootNavController: NavHostController) {
                         onDismiss = { navController.popBackStack() },
                         onCreate = { data ->
                             scope.launch {
-                                    val success = controller.createCommunity(context, data)
-                                    if (success) {
-                                        navController.previousBackStackEntry
-                                            ?.savedStateHandle
-                                            ?.set("refresh_communities", true)
-                                        navController.popBackStack()
-                                        Toast.makeText(context, "Tạo cộng đồng thành công", Toast.LENGTH_SHORT).show()
-                                    }
+                                val success = controller.createCommunity(context, data)
+                                if (success) {
+                                    navController.previousBackStackEntry
+                                        ?.savedStateHandle
+                                        ?.set("refresh_communities", true)
+                                    navController.popBackStack()
+                                    Toast.makeText(context, "Tạo cộng đồng thành công", Toast.LENGTH_SHORT).show()
+                                }
                             }
                         }
                     )
@@ -300,10 +370,49 @@ fun AppHomeScreen(rootNavController: NavHostController) {
                         communityId = id,
                         onBackClick = { navController.popBackStack() },
                         onSearchClick = {
-                            navController.navigate("search?community=$id")
+                            navController.navigate("search_post/$id")
+                        },
+                        onPostClick = { postId ->
+                            navController.navigate("post_detail/$postId")
                         }
                     )
                 }
+                //
+                composable(
+                    route = "post_detail/{postId}",
+                    arguments = listOf(navArgument("postId") { type = NavType.IntType })
+                ) { backStackEntry ->
+                    val postId = backStackEntry.arguments!!.getInt("postId")
+                    val context = LocalContext.current
+                    PostDetailScreen(
+                        context = context,
+                        postId = postId,
+                        onBackClick = { navController.popBackStack() },
+                        onCommunityClick = { communityName ->
+                            navController.navigate("community/$communityName")
+                        },
+                        onUserClick = { userId ->
+                            navController.navigate("user_profile/$userId")
+                        }
+                    )
+                }
+                composable(
+                    route = "search_post/{communityId}",
+                    arguments = listOf(navArgument("communityId") {
+                        type = NavType.IntType
+                    })
+                ) { backStackEntry ->
+                    val communityId = backStackEntry.arguments!!.getInt("communityId")
+
+                    SearchCommunityScreen(
+                        communityId = communityId,
+                        onBackClick = { navController.popBackStack() },
+                        onPostClick = { postId ->
+                            navController.navigate("post_detail/$postId")
+                        }
+                    )
+                }
+
             }
         }
     }

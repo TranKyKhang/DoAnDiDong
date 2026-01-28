@@ -182,9 +182,11 @@ class post {
                     .build()
                 client.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) {
+                        Log.d("API_DEBUG", "Response body:null")
                         return@withContext null
                     }
                     val body = response.body?.string()
+                    Log.d("API_DEBUG", "Response body: $body")
                     if (body == null) {
                         return@withContext null
                     }
@@ -326,7 +328,90 @@ class post {
             false
         }
     }
+    suspend fun updatePost(
+        context: Context,
+        postId: Int,
+        content: String?,
+        linkUrl: String? = null,
+        imageUris: List<Uri> = emptyList(),
+        videoUri: Uri? = null
+    ): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val token = TokenManager.getToken(context)
+                ?: return@withContext false
 
+            val bodyBuilder = MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+
+
+            content?.let {
+                bodyBuilder.addFormDataPart("content", it)
+            }
+
+            linkUrl?.let {
+                bodyBuilder.addFormDataPart("link_url", it)
+            }
+
+
+            imageUris.forEach { uri ->
+                val file = uriToFile(context, uri)
+                bodyBuilder.addFormDataPart(
+                    "images",
+                    file.name,
+                    file.asRequestBody("image/*".toMediaType())
+                )
+            }
+
+            videoUri?.let { uri ->
+                val file = uriToFile(context, uri)
+                bodyBuilder.addFormDataPart(
+                    "video",
+                    file.name,
+                    file.asRequestBody("video/*".toMediaType())
+                )
+            }
+
+            val request = Request.Builder()
+                .url("$BASE_URL/api/posts/$postId")
+                .put(bodyBuilder.build())
+                .addHeader("Authorization", "Bearer $token")
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                Log.d("API_DEBUG", "Update post code: ${response.code}")
+                response.isSuccessful
+            }
+        } catch (e: Exception) {
+            Log.e("API_DEBUG", "Update post error: ${e.message}")
+            e.printStackTrace()
+            false
+        }
+    }
+
+    suspend fun removePost(
+        context: Context,
+        postId: Int
+    ): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val token = TokenManager.getToken(context)
+                ?: return@withContext false
+
+            val request = Request.Builder()
+                .url("$BASE_URL/api/posts/$postId")
+                .delete()
+                .addHeader("Authorization", "Bearer $token")
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                Log.d("API_DEBUG", "Remove post code: ${response.code}")
+                response.isSuccessful
+            }
+        } catch (e: Exception) {
+            Log.e("API_DEBUG", "Remove post error: ${e.message}")
+            e.printStackTrace()
+            false
+        }
+    }
     fun uriToFile(context: Context, uri: Any): File {
         val realUri = uri as Uri
         val contentResolver = context.contentResolver

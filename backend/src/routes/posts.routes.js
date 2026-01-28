@@ -9,7 +9,8 @@ import {
   getCommunityPosts,
   createPost,
   getNewestCommunityPosts,      
-  getRisingCommunityPosts       
+  getRisingCommunityPosts,
+  removePost       
 } from "../controllers/posts.controller.js";
 import { verifyToken } from '../middlewares/auth.middleware.js';
 
@@ -42,7 +43,7 @@ router.get("/community/:id", verifyToken, getCommunityPosts);
 
 router.get("/community/:id/newest", verifyToken, getNewestCommunityPosts);
 router.get("/community/:id/rising",  verifyToken, getRisingCommunityPosts);
-
+router.delete("/:id", verifyToken, removePost);
 router.get("/:id", verifyToken, getPostDetail);
 
 export default router;
